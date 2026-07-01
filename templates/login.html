@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta name="robots" content="noindex, nofollow">
+    <meta name="google" content="nositelinkssearchbox" />
+    <meta name="google" content="notranslate" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Projeto EDUCA</title>
+
+    <style>
+        *, *::before, *::after { box-sizing: border-box; }
+
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background-color: #f4f4f4;
+            margin: 0;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        body.dark-theme {
+            background-color: #1a1a1a;
+            color: #f4f4f4;
+        }
+
+        .card {
+            background: #fff;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+            padding: 2rem;
+            width: 340px;
+            position: relative;
+            transition: background-color 0.3s, box-shadow 0.3s;
+        }
+
+        body.dark-theme .card {
+            background: #2d2d2d;
+            box-shadow: 0 2px 10px rgba(255,255,255,0.1);
+        }
+
+        h2 {
+            font-size: 20px;
+            font-weight: 600;
+            margin: 0 0 4px;
+            color: #111;
+            transition: color 0.3s;
+        }
+
+        body.dark-theme h2 { color: #f4f4f4; }
+
+        .subtitle {
+            font-size: 14px;
+            color: #666;
+            margin: 0 0 1.5rem;
+            transition: color 0.3s;
+        }
+
+        body.dark-theme .subtitle { color: #aaa; }
+
+        label {
+            display: block;
+            font-size: 13px;
+            font-weight: 500;
+            color: #555;
+            margin-bottom: 6px;
+            transition: color 0.3s;
+        }
+
+        body.dark-theme label { color: #aaa; }
+
+        .field { margin-bottom: 1rem; }
+        .input-wrap {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        input[type=text] {
+            width: 100%;
+            padding: 10px 45px 10px 12px;
+            font-size: 14px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            outline: none;
+        }
+
+        body.dark-theme input[type=text] {
+            background: #3a3a3a;
+            border-color: #444;
+            color: #f4f4f4;
+        }
+
+        input:focus {
+            border-color: #1D9E75;
+            box-shadow: 0 0 0 3px rgba(29,158,117,0.12);
+        }
+
+        /* MÁSCARA DE SENHA VIA CSS (Segurança contra o gerenciador do Chrome) */
+        .secure-input {
+            -webkit-text-security: disc !important;
+        }
+
+        .eye-btn {
+            position: absolute;
+            right: 0;
+            height: 100%;
+            width: 40px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #aaa;
+            transition: color 0.3s;
+            padding: 0;
+        }
+
+        .eye-btn svg {
+            width: 20px;
+            height: 20px;
+            display: block;
+        }
+
+        .eye-btn:hover { color: #555; }
+        body.dark-theme .eye-btn { color: #888; }
+        body.dark-theme .eye-btn:hover { color: #bbb; }
+
+        .submit-btn {
+            width: 100%;
+            padding: 10px;
+            background: #1D9E75;
+            color: #fff;
+            border: none;
+            border-radius: 6px;
+            font-size: 15px;
+            font-weight: 500;
+            cursor: pointer;
+            margin-top: 0.25rem;
+            transition: background 0.15s;
+        }
+
+        .submit-btn:hover { background: #0F6E56; }
+
+        .submit-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .msg {
+            margin-top: 1rem;
+            font-size: 13px;
+            padding: 10px 12px;
+            border-radius: 6px;
+            display: none;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        .msg.success {
+            display: block;
+            background: #e6f7f1;
+            color: #0F6E56;
+        }
+
+        body.dark-theme .msg.success {
+            background: #1a3a2a;
+            color: #4fbd8a;
+        }
+
+        .msg.error {
+            display: block;
+            background: #fdecea;
+            color: #c0392b;
+        }
+
+        body.dark-theme .msg.error {
+            background: #3a1a1a;
+            color: #e06666;
+        }
+
+        .footer-link {
+            text-align: center;
+            margin-top: 1.25rem;
+            font-size: 13px;
+            color: #666;
+            transition: color 0.3s;
+        }
+
+        body.dark-theme .footer-link { color: #aaa; }
+        .footer-link a { color: #1D9E75; text-decoration: none; font-weight: 500; transition: color 0.3s; }
+        .footer-link a:hover { text-decoration: underline; }
+        body.dark-theme .footer-link a { color: #4fbd8a; }
+        body.dark-theme .footer-link a:hover { color: #6dd5a8; }
+
+        .spinner {
+            display: inline-block;
+            width: 14px;
+            height: 14px;
+            border: 2px solid rgba(255,255,255,0.4);
+            border-top-color: #fff;
+            border-radius: 50%;
+            animation: spin 0.6s linear infinite;
+            margin-right: 6px;
+            vertical-align: middle;
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .theme-toggle {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 6px;
+            border-radius: 50%;
+            transition: background-color 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .theme-toggle:hover { background-color: rgba(0,0,0,0.05); }
+        body.dark-theme .theme-toggle:hover { background-color: rgba(255,255,255,0.1); }
+        .theme-icon { width: 20px; height: 20px; fill: #666; transition: fill 0.3s; }
+        body.dark-theme .theme-icon { fill: #aaa; }
+    </style>
+</head>
+
+<body>
+    <div class="card">
+        <button class="theme-toggle" id="themeToggle" aria-label="Alternar tema">
+            <svg class="theme-icon" id="themeIcon" viewBox="0 0 24 24">
+                <path d="M12 18a6 6 0 1 0 0-12 6 6 0 0 0 0 12z"/>
+            </svg>
+        </button>
+
+        <h2>Projeto EDUCA</h2>
+        <p class="subtitle">Faça login para continuar</p>
+
+        <div class="field">
+            <label for="username">Nome de usuário</label>
+            <input type="text" id="username" placeholder="seu usuario"
+                   autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+        </div>
+
+        <div class="field">
+            <label for="password">Senha</label>
+            <div class="input-wrap">
+                <input type="text" id="password" class="secure-input" placeholder="••••••••" autocomplete="off">
+                <button class="eye-btn" id="togglePwd" type="button">
+                    <svg id="eyeIcon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
+                    </svg>
+                </button>
+            </div>
+        </div>
+
+        <button class="submit-btn" id="loginBtn" type="button">Entrar</button>
+
+        <div class="msg" id="msg"></div>
+
+        <div class="footer-link">
+            Não tem conta? <a href="{{ url_for('register_page') }}">Registre-se aqui</a>
+        </div>
+    </div>
+
+    <script>
+        const API = window.location.origin;
+
+        const eyeOpen  = '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>';
+        const eyeClosed = '<path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/>';
+
+        const themeToggle = document.getElementById('themeToggle');
+        themeToggle.addEventListener('click', () => {
+            document.body.classList.toggle('dark-theme');
+            localStorage.setItem('theme', document.body.classList.contains('dark-theme') ? 'dark' : 'light');
+        });
+        if (localStorage.getItem('theme') === 'dark') document.body.classList.add('dark-theme');
+
+        document.getElementById('togglePwd').addEventListener('click', function () {
+            const inp = document.getElementById('password');
+            const hasMask = inp.classList.contains('secure-input');
+            if (hasMask) {
+                inp.classList.remove('secure-input');
+                document.getElementById('eyeIcon').innerHTML = eyeClosed;
+            } else {
+                inp.classList.add('secure-input');
+                document.getElementById('eyeIcon').innerHTML = eyeOpen;
+            }
+        });
+
+        document.getElementById('password').addEventListener('keydown', function (e) {
+            if (e.key === 'Enter') doLogin();
+        });
+
+        document.getElementById('loginBtn').addEventListener('click', doLogin);
+
+        async function doLogin() {
+            const username = document.getElementById('username').value.trim();
+            const password = document.getElementById('password').value;
+            const btn = document.getElementById('loginBtn');
+            const msg = document.getElementById('msg');
+
+            msg.className = 'msg';
+            msg.textContent = '';
+
+            if (!username || !password) {
+                msg.className = 'msg error';
+                msg.textContent = 'Preencha o nome de usuário e a senha.';
+                return;
+            }
+
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner"></span>Entrando…';
+
+            try {
+                const res = await fetch(`${API}/api/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+                const data = await res.json();
+
+                if (res.ok) {
+                    msg.className = 'msg success';
+                    msg.textContent = data.message || 'Login realizado com sucesso!';
+
+                    setTimeout(() => {
+                        // Grava o estado na aba para controle de fechamento
+                        sessionStorage.setItem('aba_ativa', 'true');
+                        window.location.href = '/admin';
+                    }, 1000);
+                } else {
+                    msg.className = 'msg error';
+                    msg.textContent = data.message || 'Credenciais inválidas.';
+                }
+            } catch (err) {
+                msg.className = 'msg error';
+                msg.textContent = 'Não foi possível conectar ao servidor. Verifique se o backend está rodando.';
+                console.error("Erro de login:", err);
+            }
+
+            btn.disabled = false;
+            btn.innerHTML = 'Entrar';
+        }
+    </script>
+</body>
+</html>

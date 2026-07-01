@@ -1,0 +1,18 @@
+# Ambiente Virtual do Python
+venv/
+.venv/
+env/
+
+# Configurações de Senhas e Chaves
+.env
+.env.local
+
+# Pasta de uploads local (Evita enviar arquivos e pastas arrastadas para o GitHub)
+uploads/
+
+# Pastas de cache do Python
+__pycache__/
+*.pyc
+
+# Notas temporárias locais
+nada.txt

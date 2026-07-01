@@ -1,0 +1,732 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Arquivos - Projeto EDUCA</title>
+    <style>
+        /* Estilos Base e Tema */
+        *, *::before, *::after { box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; display: flex; justify-content: center; align-items: center; min-height: 100vh; background-color: #f4f4f4; margin: 0; transition: 0.3s; }
+        body.dark-theme { background-color: #1a1a1a; color: #f4f4f4; }
+        
+        .admin-container { background: #fff; border-radius: 10px; padding: 2rem; width: 90%; max-width: 800px; position: relative; box-shadow: 0 2px 10px rgba(0,0,0,0.08); }
+        body.dark-theme .admin-container { background: #2d2d2d; box-shadow: 0 2px 10px rgba(255,255,255,0.1); }
+
+        h1 { font-size: 22px; margin-bottom: 5px; }
+        .subtitle { font-size: 13px; color: #666; margin-bottom: 25px; }
+        body.dark-theme .subtitle { color: #aaa; }
+
+        /* Área de Arraste e Solte (Drag & Drop) */
+        .drop-zone {
+            border: 2px dashed #1D9E75;
+            border-radius: 12px;
+            padding: 2.5rem;
+            text-align: center;
+            cursor: pointer;
+            transition: 0.2s;
+            background: #fdfdfd;
+            margin-bottom: 1.5rem;
+        }
+        body.dark-theme .drop-zone { background: #333; }
+        .drop-zone.drag-over {
+            background-color: rgba(29, 158, 117, 0.1);
+            border-color: #0F6E56;
+        }
+
+        .drop-text { font-size: 14px; color: #555; }
+        body.dark-theme .drop-text { color: #ccc; }
+
+        /* Barra de Carregamento (Progresso) */
+        .progress-container {
+            width: 100%;
+            background-color: #eee;
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+            overflow: hidden;
+            display: none;
+        }
+        body.dark-theme .progress-container { background-color: #444; }
+
+        .progress-bar {
+            width: 0%;
+            height: 12px;
+            background-color: #007bff;
+            transition: width 0.1s linear, background-color 0.3s ease;
+        }
+        .progress-bar.success {
+            background-color: #28a745;
+        }
+
+        .progress-info {
+            display: none;
+            justify-content: space-between;
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 1.5rem;
+        }
+        body.dark-theme .progress-info { color: #bbb; }
+
+        /* Tabela de Arquivos com LARGURAS FIXAS E ALINHAMENTOS */
+        .file-table { 
+            width: 100%; 
+            border-collapse: collapse; 
+            table-layout: fixed;
+            margin-bottom: 1.5rem;
+        }
+        .file-table th, .file-table td { padding: 12px 15px; border-bottom: 1px solid #eee; vertical-align: middle; }
+        body.dark-theme .file-table td { border-bottom-color: #444; }
+        .file-table th { background-color: #f8f8f8; color: #555; font-size: 13px; }
+        body.dark-theme .file-table th { background-color: #3a3a3a; color: #aaa; }
+
+        /* Definição estável de tamanhos das colunas */
+        .file-table th:nth-child(1), .file-table td:nth-child(1) { width: 55%; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } /* Nome */
+        .file-table th:nth-child(2), .file-table td:nth-child(2) { width: 15%; text-align: center; } /* Tamanho */
+        .file-table th:nth-child(3), .file-table td:nth-child(3) { width: 30%; text-align: right; } /* Ações */
+
+        /* Estilo para links de pastas e arquivos */
+        .folder-link {
+            color: #1D9E75;
+            text-decoration: none;
+            font-weight: bold;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .folder-link:hover { text-decoration: underline; }
+        body.dark-theme .folder-link { color: #4fbd8a; }
+
+        .file-link {
+            font-weight: bold;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: inherit;
+        }
+
+        /* Botões */
+        .btn {
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 500;
+            transition: 0.15s;
+            text-decoration: none;
+            display: inline-block;
+        }
+        .btn-primary { background-color: #1D9E75; color: white; }
+        .btn-primary:hover { background-color: #0F6E56; }
+        .btn-secondary { background-color: #666; color: white; }
+        .btn-secondary:hover { background-color: #555; }
+
+        .action-btn { border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: 500; text-decoration: none; margin-left: 5px; display: inline-block; }
+        .download-btn { background-color: #1D9E75; color: white; }
+        .download-btn:hover { background-color: #0F6E56; }
+        .delete-btn { background-color: #dc3545; color: white; }
+        .delete-btn:hover { background-color: #bd2130; }
+
+        /* Contêiner de Ações no Rodapé */
+        .bottom-actions {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 2rem;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .theme-toggle { position: absolute; top: 1rem; right: 1rem; background: none; border: none; cursor: pointer; }
+        .theme-icon { width: 20px; height: 20px; fill: #666; }
+        body.dark-theme .theme-icon { fill: #aaa; }
+
+        #message { margin-top: 1rem; padding: 10px; border-radius: 6px; display: none; font-size: 13px; }
+        .msg-success { background: #e6f7f1; color: #0F6E56; }
+        .msg-error { background: #fdecea; color: #c0392b; }
+
+        /* Modais personalizados centralizados */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s ease;
+        }
+        .modal-overlay.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .modal-box {
+            background: #fff;
+            padding: 1.5rem;
+            border-radius: 10px;
+            width: 90%;
+            max-width: 380px;
+            text-align: center;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+            transform: scale(0.9);
+            transition: transform 0.2s ease;
+        }
+        body.dark-theme .modal-box {
+            background: #2d2d2d;
+            color: #f4f4f4;
+        }
+        .modal-overlay.active .modal-box {
+            transform: scale(1);
+        }
+
+        .modal-title { font-size: 16px; font-weight: bold; margin-bottom: 8px; }
+        .modal-subtitle { font-size: 13px; color: #666; margin-bottom: 15px; }
+        body.dark-theme .modal-subtitle { color: #aaa; }
+
+        .modal-input {
+            width: 100%;
+            padding: 10px;
+            font-size: 14px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            outline: none;
+            margin-bottom: 15px;
+        }
+        body.dark-theme .modal-input {
+            background: #3a3a3a;
+            border-color: #444;
+            color: #f4f4f4;
+        }
+        .modal-input:focus {
+            border-color: #1D9E75;
+        }
+
+        .modal-buttons {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="admin-container">
+        <!-- Botão de tema -->
+        <button class="theme-toggle" id="themeToggle">
+            <svg class="theme-icon" id="themeIcon" viewBox="0 0 24 24"><path d="M12 18a6 6 0 1 0 0-12 6 6 0 0 0 0 12z"/></svg>
+        </button>
+
+        <h1>Arquivos</h1>
+        <p class="subtitle" id="subtitleText">Arraste seus arquivos para upload seguro com substituição automática.</p>
+
+        <!-- Zona de Arraste e Solte -->
+        <div class="drop-zone" id="dropZone">
+            <span class="drop-text" id="dropText">Arraste e solte arquivos aqui</span>
+            <input type="file" id="fileInput" style="display: none;" multiple>
+        </div>
+
+        <!-- Barra de Progresso de Upload Global -->
+        <div class="progress-container" id="progressContainer">
+            <div class="progress-bar" id="progressBar"></div>
+        </div>
+        <div class="progress-info" id="progressInfo">
+            <span id="uploadStatus">Aguardando...</span>
+            <span id="uploadPercent">0%</span>
+        </div>
+
+        <div id="message"></div>
+
+        <!-- Tabela com os Arquivos Salvos -->
+        <table class="file-table" id="fileTable">
+            <thead>
+                <tr>
+                    <th>Nome do Arquivo</th>
+                    <th>Tamanho</th>
+                    <th style="text-align: right;">Ações</th>
+                </tr>
+            </thead>
+            <tbody id="fileTableBody">
+                <!-- Preenchido via JavaScript -->
+            </tbody>
+        </table>
+
+        <!-- Contêiner de Ações no Rodapé -->
+        <div class="bottom-actions">
+            <button class="btn btn-secondary" id="backDirBtn" style="display: none;">← Voltar uma Pasta</button>
+            <button class="btn btn-primary" id="createFolderBtn" style="margin-left: auto;">+ Criar Pasta</button>
+        </div>
+    </div>
+
+    <!-- MODAL 1: CRIAR PASTA -->
+    <div class="modal-overlay" id="folderModal">
+        <div class="modal-box">
+            <div class="modal-title">Criar Nova Pasta</div>
+            <div class="modal-subtitle">Digite o nome da pasta organizadora abaixo:</div>
+            <input type="text" class="modal-input" id="folderModalInput" placeholder="Ex: Documentos" autocomplete="off">
+            <div class="modal-buttons">
+                <button class="btn btn-secondary" id="folderModalCancel">Cancelar</button>
+                <button class="btn btn-primary" id="folderModalConfirm">Criar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL 2: CONFIRMAÇÃO DE SENHA PARA EXCLUSÃO (Sem dicas ou numeração) -->
+    <div class="modal-overlay" id="deleteModal">
+        <div class="modal-box">
+            <div class="modal-title" id="deleteModalTitle">Confirmar Exclusão</div>
+            <div class="modal-subtitle" id="deleteModalSubtitle">Confirme digitando a sua senha:</div>
+            <input type="password" class="modal-input" id="deleteModalInput" placeholder="Sua senha" autocomplete="off">
+            <div class="modal-buttons">
+                <button class="btn btn-secondary" id="deleteModalCancel">Cancelar</button>
+                <button class="btn btn-primary" style="background-color: #dc3545;" id="deleteModalConfirm">Deletar</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        if (!sessionStorage.getItem('aba_ativa')) {
+            window.location.href = '/logout';
+        }
+
+        const API = window.location.origin;
+        let currentPath = ''; 
+
+        // Tema
+        const themeToggle = document.getElementById('themeToggle');
+        themeToggle.addEventListener('click', () => {
+            document.body.classList.toggle('dark-theme');
+            localStorage.setItem('theme', document.body.classList.contains('dark-theme') ? 'dark' : 'light');
+        });
+        if (localStorage.getItem('theme') === 'dark') document.body.classList.add('dark-theme');
+
+        // Configuração do Drag and Drop
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('fileInput');
+
+        dropZone.addEventListener('click', () => fileInput.click());
+
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('drag-over');
+        });
+
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.classList.remove('drag-over');
+        });
+
+        // MECANISMO DE VARREDURA DE LOTE (Múltiplos arquivos ou pastas)
+        let activeScans = 0;
+        let uploadQueue = [];
+
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('drag-over');
+            
+            const items = e.dataTransfer.items;
+            if (items && items.length > 0) {
+                uploadQueue = [];
+                activeScans = 0;
+                
+                for (let i = 0; i < items.length; i++) {
+                    const item = items[i].webkitGetAsEntry();
+                    if (item) {
+                        traverseFileTree(item, currentPath);
+                    }
+                }
+            }
+        });
+
+        fileInput.addEventListener('change', () => {
+            if (fileInput.files.length > 0) {
+                uploadQueue = [];
+                for (let i = 0; i < fileInput.files.length; i++) {
+                    uploadQueue.push({ file: fileInput.files[i], path: currentPath });
+                }
+                startBatchUpload();
+            }
+        });
+
+        function startScan() {
+            activeScans++;
+        }
+
+        function endScan() {
+            activeScans--;
+            if (activeScans === 0) {
+                startBatchUpload();
+            }
+        }
+
+        function traverseFileTree(item, relativePath) {
+            startScan();
+            if (item.isFile) {
+                item.file(file => {
+                    uploadQueue.push({ file, path: relativePath });
+                    endScan();
+                });
+            } else if (item.isDirectory) {
+                const folderName = item.name;
+                createFolderSilently(folderName, relativePath).then(() => {
+                    const dirReader = item.createReader();
+                    const newPath = relativePath === '' ? folderName : `${relativePath}/${folderName}`;
+                    
+                    dirReader.readEntries(entries => {
+                        if (entries.length === 0) {
+                            endScan();
+                        } else {
+                            for (let entry of entries) {
+                                traverseFileTree(entry, newPath);
+                            }
+                            endScan();
+                        }
+                    });
+                });
+            }
+        }
+
+        function createFolderSilently(name, path) {
+            return new Promise((resolve) => {
+                fetch(`${API}/api/create-folder`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ path: path, name: name })
+                }).then(() => resolve()).catch(() => resolve());
+            });
+        }
+
+        // GERENCIADOR DE UPLOAD GLOBAL
+        let totalBytes = 0;
+        let totalBytesUploaded = 0;
+        let queueIndex = 0;
+
+        function startBatchUpload() {
+            if (uploadQueue.length === 0) return;
+
+            totalBytes = 0;
+            totalBytesUploaded = 0;
+            queueIndex = 0;
+
+            uploadQueue.forEach(item => { totalBytes += item.file.size; });
+
+            if (totalBytes === 0) {
+                loadFiles();
+                return;
+            }
+
+            const progressContainer = document.getElementById('progressContainer');
+            const progressBar = document.getElementById('progressBar');
+            const progressInfo = document.getElementById('progressInfo');
+            const uploadStatus = document.getElementById('uploadStatus');
+
+            progressBar.className = 'progress-bar';
+            progressBar.style.width = '0%';
+            progressContainer.style.display = 'block';
+            progressInfo.style.display = 'flex';
+            uploadStatus.textContent = `Enviando lote (${uploadQueue.length} arquivos)...`;
+
+            uploadNextInQueue();
+        }
+
+        function uploadNextInQueue() {
+            if (queueIndex >= uploadQueue.length) {
+                const progressBar = document.getElementById('progressBar');
+                const uploadStatus = document.getElementById('uploadStatus');
+                
+                progressBar.classList.add('success');
+                uploadStatus.textContent = 'Lote salvo com sucesso!';
+                loadFiles();
+
+                setTimeout(() => {
+                    document.getElementById('progressContainer').style.display = 'none';
+                    document.getElementById('progressInfo').style.display = 'none';
+                }, 3000);
+                return;
+            }
+
+            const currentItem = uploadQueue[queueIndex];
+            const formData = new FormData();
+            formData.append('file', currentItem.file);
+            formData.append('path', currentItem.path);
+
+            const xhr = new XMLHttpRequest();
+            let fileLastLoaded = 0;
+
+            xhr.upload.addEventListener('progress', (e) => {
+                if (e.lengthComputable) {
+                    const delta = e.loaded - fileLastLoaded;
+                    totalBytesUploaded += delta;
+                    fileLastLoaded = e.loaded;
+
+                    const percent = Math.min(Math.round((totalBytesUploaded / totalBytes) * 100), 99);
+                    document.getElementById('progressBar').style.width = percent + '%';
+                    document.getElementById('uploadPercent').textContent = percent + '%';
+                }
+            });
+
+            xhr.addEventListener('load', () => {
+                if (xhr.status === 200) {
+                    const delta = currentItem.file.size - fileLastLoaded;
+                    totalBytesUploaded += delta;
+
+                    queueIndex++;
+                    uploadNextInQueue();
+                } else {
+                    showError('Erro ao gravar arquivo no lote.');
+                }
+            });
+
+            xhr.addEventListener('error', () => {
+                showError('Erro ao se conectar com o servidor.');
+            });
+
+            xhr.open('POST', `${API}/api/upload`);
+            xhr.send(formData);
+        }
+
+        // MODAL CRIAR PASTA
+        const folderModal = document.getElementById('folderModal');
+        const folderInput = document.getElementById('folderModalInput');
+
+        document.getElementById('createFolderBtn').onclick = () => {
+            folderInput.value = '';
+            folderModal.classList.add('active');
+            folderInput.focus();
+        };
+
+        document.getElementById('folderModalCancel').onclick = () => folderModal.classList.remove('active');
+        document.getElementById('folderModalConfirm').onclick = submitCreateFolder;
+        folderInput.onkeydown = (e) => { if (e.key === 'Enter') submitCreateFolder(); };
+
+        async function submitCreateFolder() {
+            const folderName = folderInput.value.trim();
+            folderModal.classList.remove('active');
+            if (!folderName) return;
+
+            try {
+                const res = await fetch(`${API}/api/create-folder`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ path: currentPath, name: folderName })
+                });
+
+                if (res.ok) loadFiles();
+                else {
+                    const data = await res.json();
+                    alert(data.message || "Erro ao criar pasta.");
+                }
+            } catch (e) {
+                alert("Erro ao conectar com o servidor.");
+            }
+        }
+
+        function showError(msg) {
+            const messageDiv = document.getElementById('message');
+            messageDiv.className = 'msg msg-error';
+            messageDiv.textContent = msg;
+            messageDiv.style.display = 'block';
+            document.getElementById('progressContainer').style.display = 'none';
+            document.getElementById('progressInfo').style.display = 'none';
+        }
+
+        function updateNavigationUI() {
+            const backDirBtn = document.getElementById('backDirBtn');
+            const createFolderBtn = document.getElementById('createFolderBtn');
+            const subtitleText = document.getElementById('subtitleText');
+
+            if (currentPath === '') {
+                backDirBtn.style.display = 'none';
+                createFolderBtn.style.marginLeft = 'auto';
+                // Mensagem padrão na raiz com cor cinza normal do CSS
+                subtitleText.textContent = "Arraste seus arquivos para upload seguro com substituição automática.";
+                subtitleText.style.color = ''; 
+                subtitleText.style.fontWeight = 'normal';
+            } else {
+                backDirBtn.style.display = 'inline-block';
+                createFolderBtn.style.marginLeft = '0';
+                // Substitui o texto pelo caminho em VERDE e em NEGRITO para se localizar melhor
+                subtitleText.textContent = `Caminho atual: /${currentPath}`;
+                subtitleText.style.color = '#1D9E75'; 
+                subtitleText.style.fontWeight = 'bold';
+            }
+        }
+
+        // Carregar arquivos e pastas
+        async function loadFiles() {
+            updateNavigationUI();
+            try {
+                const res = await fetch(`${API}/api/files?path=${encodeURIComponent(currentPath)}`);
+                if (res.status === 401 || res.status === 403) {
+                    window.location.href = '/logout';
+                }
+                const items = await res.json();
+                const tbody = document.getElementById('fileTableBody');
+                tbody.innerHTML = '';
+
+                if (items.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; color:#999;">Esta pasta está vazia.</td></tr>';
+                    return;
+                }
+
+                items.sort((a, b) => b.type.localeCompare(a.type));
+
+                items.forEach(item => {
+                    const tr = document.createElement('tr');
+                    
+                    if (item.type === 'directory') {
+                        tr.innerHTML = `
+                            <td>
+                                <a class="folder-link" onclick="enterFolder('${item.name}')">📁 ${item.name}</a>
+                            </td>
+                            <td style="text-align: center; color: #999;">-</td>
+                            <td style="text-align: right;">
+                                <a class="action-btn download-btn" href="${API}/api/download?name=${encodeURIComponent(item.name)}&path=${encodeURIComponent(currentPath)}">Baixar</a>
+                                <button class="action-btn delete-btn" onclick="deleteItem('${item.name}')">Deletar</button>
+                            </td>
+                        `;
+                    } else {
+                        tr.innerHTML = `
+                            <td>
+                                <span class="file-link">📄 ${item.name}</span>
+                            </td>
+                            <td style="text-align: center; font-size: 12px; color: #666;">${item.size}</td>
+                            <td style="text-align: right;">
+                                <a class="action-btn download-btn" href="${API}/api/download?name=${encodeURIComponent(item.name)}&path=${encodeURIComponent(currentPath)}">Baixar</a>
+                                <button class="action-btn delete-btn" onclick="deleteItem('${item.name}')">Deletar</button>
+                            </td>
+                        `;
+                    }
+                    tbody.appendChild(tr);
+                });
+            } catch (e) {
+                console.error("Erro ao listar arquivos");
+            }
+        }
+
+        window.enterFolder = function(folderName) {
+            currentPath = currentPath === '' ? folderName : `${currentPath}/${folderName}`;
+            loadFiles();
+        }
+
+        document.getElementById('backDirBtn').onclick = () => {
+            const parts = currentPath.split('/');
+            parts.pop();
+            currentPath = parts.join('/');
+            loadFiles();
+        };
+
+        // =========================================================================
+        // LÓGICA DO MODAL PERS. DE DELETAR COM SENHA E PENALIDADE EXPONENCIAL ASYNC
+        // =========================================================================
+        function showCustomPrompt(title, subtitle) {
+            return new Promise((resolve) => {
+                const modal = document.getElementById('deleteModal');
+                const titleEl = document.getElementById('deleteModalTitle');
+                const subtitleEl = document.getElementById('deleteModalSubtitle');
+                const inputEl = document.getElementById('deleteModalInput');
+                const confirmBtn = document.getElementById('deleteModalConfirm');
+                const cancelBtn = document.getElementById('deleteModalCancel');
+
+                // Mantém o título neutro e limpo, sem dicas de contador
+                titleEl.textContent = title;
+                subtitleEl.textContent = subtitle || '';
+                inputEl.value = '';
+                modal.classList.add('active');
+                inputEl.focus();
+
+                function cleanup(value) {
+                    modal.classList.remove('active');
+                    confirmBtn.onclick = null;
+                    cancelBtn.onclick = null;
+                    inputEl.onkeydown = null;
+                    resolve(value);
+                }
+
+                confirmBtn.onclick = () => cleanup(inputEl.value);
+                cancelBtn.onclick = () => cleanup(null);
+                
+                inputEl.onkeydown = (e) => {
+                    if (e.key === 'Enter') {
+                        cleanup(inputEl.value);
+                    }
+                };
+            });
+        }
+
+        let deleteErrorCount = 0; // Controla os erros cometidos na sessão atual
+
+        window.deleteItem = async function(itemName) {
+            const validPasswords = ['delete', 'deletar', 'del', 'delet'];
+            const repetitions = deleteErrorCount === 0 ? 1 : Math.pow(2, deleteErrorCount);
+            
+            for (let i = 1; i <= repetitions; i++) {
+                // Título e subtítulos limpos e neutros, sem dicas visuais de repetição
+                let title = `Deseja realmente deletar "${itemName}"?`;
+                let subtitle = `Confirme digitando a sua senha:`;
+                
+                const userInput = await showCustomPrompt(title, subtitle);
+                if (userInput === null) return; 
+                
+                const cleanedInput = userInput.trim().toLowerCase();
+                
+                // Se errar a senha, acresce a penalidade de erro silenciosamente
+                if (!validPasswords.includes(cleanedInput)) {
+                    deleteErrorCount++; // Aumenta o contador exponencial silenciosamente
+                    return; // Aborta de forma silenciosa
+                }
+            }
+
+            try {
+                const res = await fetch(`${API}/api/files?name=${encodeURIComponent(itemName)}&path=${encodeURIComponent(currentPath)}`, {
+                    method: 'DELETE'
+                });
+                if (res.ok) {
+                    deleteErrorCount = 0; // Sucesso! Reseta a penalidade
+                    loadFiles();
+                } else if (res.status === 401 || res.status === 403) {
+                    window.location.href = '/logout';
+                }
+            } catch (e) {
+                alert("Erro ao excluir item.");
+            }
+        }
+
+        loadFiles();
+
+
+    // ===== ATALHOS DE TECLADO (Backspace e Esc) =====
+        document.addEventListener('keydown', (e) => {
+            const isTyping = document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA';
+
+            // 1. TECLA ESC: Se houver modal aberto, fecha. Se não houver, retorna instantaneamente à Raiz (Página 1)
+            if (e.key === 'Escape') {
+                const activeModal = document.querySelector('.modal-overlay.active');
+                if (activeModal) {
+                    const cancelBtn = activeModal.querySelector('.btn-secondary');
+                    if (cancelBtn) cancelBtn.click();
+                } else {
+                    // Se não houver modal aberto e você estiver em uma subpasta, volta tudo para a raiz
+                    if (currentPath !== '') {
+                        currentPath = '';
+                        loadFiles();
+                    }
+                }
+            }
+
+            // 2. TECLA BACKSPACE: Volta uma pasta (apenas se NÃO estiver digitando)
+            if (e.key === 'Backspace' && !isTyping) {
+                const backDirBtn = document.getElementById('backDirBtn');
+                if (backDirBtn && backDirBtn.style.display !== 'none') {
+                    e.preventDefault(); 
+                    backDirBtn.click();
+                }
+            }
+        });
+    </script>
+</body>
+</html>

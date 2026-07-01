@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Painel de Administração - Projeto EDUCA</title>
+    <style>
+        *, *::before, *::after { box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; display: flex; justify-content: center; align-items: center; min-height: 100vh; background-color: #f4f4f4; margin: 0; transition: 0.3s; }
+        body.dark-theme { background-color: #1a1a1a; color: #f4f4f4; }
+        
+        .admin-container { background: #fff; border-radius: 10px; padding: 2rem; width: 90%; max-width: 900px; position: relative; box-shadow: 0 2px 10px rgba(0,0,0,0.08); }
+        body.dark-theme .admin-container { background: #2d2d2d; box-shadow: 0 2px 10px rgba(255,255,255,0.1); }
+
+        .user-table { width: 100%; border-collapse: collapse; margin-top: 1.5rem; }
+        .user-table th, .user-table td { padding: 12px 15px; text-align: left; border-bottom: 1px solid #eee; }
+        body.dark-theme .user-table td { border-bottom-color: #444; }
+        .user-table th { background-color: #f8f8f8; color: #555; }
+        body.dark-theme .user-table th { background-color: #3a3a3a; color: #aaa; }
+
+        .status-dot {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            border: 1px solid rgba(0,0,0,0.1);
+            vertical-align: middle;
+        }
+
+        .delete-button { background-color: #dc3545; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; }
+        .logout-button { background-color: #1D9E75; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; margin-top: 1.5rem; }
+        .theme-toggle { position: absolute; top: 1rem; right: 1rem; background: none; border: none; cursor: pointer; }
+        .theme-icon { width: 20px; height: 20px; fill: #666; }
+        body.dark-theme .theme-icon { fill: #aaa; }
+
+        #message { margin-top: 1rem; padding: 10px; border-radius: 6px; display: none; }
+        .success { background: #e6f7f1; color: #0F6E56; }
+        .error { background: #fdecea; color: #c0392b; }
+    </style>
+</head>
+<body>
+    <div class="admin-container">
+        <button class="theme-toggle" id="themeToggle">
+            <svg class="theme-icon" id="themeIcon" viewBox="0 0 24 24"><path d="M12 18a6 6 0 1 0 0-12 6 6 0 0 0 0 12z"/></svg>
+        </button>
+
+        <h1>Painel de Administração</h1>
+        <p id="welcomeMessage">Carregando...</p>
+
+        <table class="user-table" id="userTable" style="display: none;">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Usuário</th>
+                    <th>Admin?</th>
+                    <th>Criado em</th>
+                    <th>Ações</th>
+                    <th style="text-align: center;">Status</th>
+                </tr>
+            </thead>
+            <tbody id="userTableBody"></tbody>
+        </table>
+
+        <div id="message"></div>
+
+        <div id="serverLegend" style="margin-top: 1.5rem; font-size: 13px; color: #666;">
+            <strong>Legenda de Dados:</strong>
+            <span style="margin-left: 10px;"><span class="status-dot" style="background-color: red;"></span> Local</span>
+            <span style="margin-left: 10px;"><span class="status-dot" style="background-color: green;"></span> Nuvem</span>
+        </div>
+
+        <button class="logout-button" id="logoutButton">Sair</button>
+    </div>
+
+    <script>
+        // 1. VERIFICAÇÃO DE ABA ATIVA (Força logout se abrir em nova aba)
+        if (!sessionStorage.getItem('aba_ativa')) {
+            window.location.href = '/logout';
+        }
+
+        // 2. API DINÂMICA
+        const API = window.location.origin;
+
+        // 3. TEMA
+        const themeToggle = document.getElementById('themeToggle');
+        themeToggle.addEventListener('click', () => {
+            document.body.classList.toggle('dark-theme');
+            localStorage.setItem('theme', document.body.classList.contains('dark-theme') ? 'dark' : 'light');
+        });
+        if (localStorage.getItem('theme') === 'dark') document.body.classList.add('dark-theme');
+
+        // 4. TOKEN
+        function getJwtToken() {
+            const cookies = document.cookie.split('; ');
+            const jwt = cookies.find(row => row.startsWith('jwt_token='));
+            return jwt ? jwt.split('=')[1] : null;
+        }
+
+        // 5. STATUS
+        async function fetchAndRenderServerStatus(users) {
+            try {
+                const response = await fetch(`${API}/api/server-status`);
+                const data = await response.json();
+                const color = data.storage_status || 'red';
+
+                users.forEach(user => {
+                    const row = Array.from(document.querySelectorAll('#userTableBody tr')).find(r => r.cells[0].textContent == user.id);
+                    if (row) {
+                        row.cells[5].innerHTML = `<span class="status-dot" style="background-color: ${color};"></span>`;
+                        row.cells[5].style.textAlign = "center";
+                    }
+                });
+            } catch (e) { console.error("Erro status"); }
+        }
+
+        // 6. CARREGAR DADOS
+        async function load() {
+            const token = getJwtToken();
+            try {
+                const resMe = await fetch(`${API}/api/me`, { headers: {'Authorization': `Bearer ${token}`} });
+                if (!resMe.ok) window.location.href = '/logout';
+                const me = await resMe.json();
+                document.getElementById('welcomeMessage').textContent = `Olá, ${me.username}!`;
+
+                const resUsers = await fetch(`${API}/users`, { headers: {'Authorization': `Bearer ${token}`} });
+                const users = await resUsers.json();
+
+                const tbody = document.getElementById('userTableBody');
+                document.getElementById('userTable').style.display = 'table';
+                tbody.innerHTML = '';
+
+                users.forEach(u => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td>${u.id}</td>
+                        <td>${u.username}</td>
+                        <td>${u.is_admin ? 'Sim' : 'Não'}</td>
+                        <td>${new Date(u.created_at).toLocaleDateString()}</td>
+                        <td><button class="delete-button" onclick="del(${u.id})">Deletar</button></td>
+                        <td></td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+                fetchAndRenderServerStatus(users);
+            } catch (e) { window.location.href = '/logout'; }
+        }
+
+        // 7. DELETAR
+        async function del(id) {
+            const token = getJwtToken();
+            try {
+                const res = await fetch(`${API}/users/${id}`, { 
+                    method: 'DELETE', 
+                    headers: {'Authorization': `Bearer ${token}`} 
+                });
+                if (res.ok) load();
+                else if (res.status === 401) window.location.href = '/logout';
+            } catch (e) { alert("Erro ao deletar"); }
+        }
+
+        document.getElementById('logoutButton').onclick = () => window.location.href = '/logout';
+        load();
+    </script>
+</body>
+</html>
