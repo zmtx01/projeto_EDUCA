@@ -14,7 +14,7 @@
         body.dark-theme .admin-container { background: #2d2d2d; box-shadow: 0 2px 10px rgba(255,255,255,0.1); }
 
         h1 { font-size: 22px; margin-bottom: 5px; }
-        .subtitle { font-size: 13px; color: #666; margin-bottom: 25px; }
+        .subtitle { font-size: 13px; color: #666; margin-bottom: 25px; transition: color 0.3s; }
         body.dark-theme .subtitle { color: #aaa; }
 
         /* Área de Arraste e Solte (Drag & Drop) */
@@ -71,7 +71,7 @@
         .file-table { 
             width: 100%; 
             border-collapse: collapse; 
-            table-layout: fixed;
+            table-layout: fixed; /* Força larguras fixas */
             margin-bottom: 1.5rem;
         }
         .file-table th, .file-table td { padding: 12px 15px; border-bottom: 1px solid #eee; vertical-align: middle; }
@@ -213,6 +213,127 @@
             justify-content: flex-end;
             gap: 10px;
         }
+
+        /* ===== JANELA FLUTUANTE DE RELATÓRIO (Arrastável) ===== */
+        .floating-window {
+            position: fixed;
+            top: 100px;
+            right: 20px;
+            width: 320px;
+            height: 300px; /* Altura inicial padrão para forçar a barra de rolagem */
+            min-width: 280px;
+            min-height: 200px;
+            max-width: 95vw;
+            max-height: 95vh;
+            background: #fff;
+            border-radius: 10px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+            z-index: 1050;
+            display: none; /* COMEÇA OCULTA POR PADRÃO */
+            border: 1px solid #ddd;
+            transition: background-color 0.3s, border-color 0.3s;
+            
+            /* Permite o redimensionamento elástico */
+            resize: both; 
+            overflow: hidden; 
+            flex-direction: column;
+        }
+        body.dark-theme .floating-window {
+            background: #2d2d2d;
+            border-color: #444;
+            box-shadow: 0 4px 20px rgba(255, 255, 255, 0.05);
+        }
+
+        .window-header {
+            background: #f8f8f8;
+            padding: 10px 15px;
+            border-bottom: 1px solid #eee;
+            cursor: move;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            user-select: none;
+            flex-shrink: 0; /* Impede o cabeçalho de espremer ao redimensionar */
+        }
+        body.dark-theme .window-header {
+            background: #3a3a3a;
+            border-bottom-color: #444;
+        }
+
+        .window-content {
+            padding: 15px;
+            flex: 1; /* Faz o conteúdo esticar junto com a janela */
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+         .report-lists-container {
+            flex: 1; /* Faz a lista esticar verticalmente ao redimensionar */
+            overflow: auto; /* Habilita rolagem automática VERTICAL e HORIZONTAL */
+            text-align: left;
+        }
+
+        /* Personalização das barras de rolagem (Horizontal e Vertical) */
+        .report-lists-container::-webkit-scrollbar { 
+            width: 6px;  /* Largura da barra vertical */
+            height: 6px; /* Altura da barra horizontal */
+        }
+        .report-lists-container::-webkit-scrollbar-thumb { 
+            background: #ccc; 
+            border-radius: 4px; 
+        }
+        body.dark-theme .report-lists-container::-webkit-scrollbar-thumb { 
+            background: #555; 
+        }
+
+        .report-list li {
+            padding: 5px 0;
+            border-bottom: 1px dashed #f0f0f0;
+            font-size: 11px;
+            
+            /* FORÇA O TEXTO EM UMA ÚNICA LINHA (Ativa a rolagem horizontal para caminhos longos) */
+            white-space: nowrap; 
+        }
+        body.dark-theme .report-list li { border-bottom-color: #444; }
+
+        /* CLASSES DE CORES DO RELATÓRIO (Adicionadas de volta) */
+        .text-success { 
+            color: #28a745 !important; 
+        }
+        .text-danger { 
+            color: #dc3545 !important; 
+        }
+        
+        /* ===== BOTÃO FECHAR "X" DA JANELA FLUTUANTE ===== */
+        .window-close-btn {
+            background: transparent !important; /* Garante fundo 100% transparente */
+            border: none !important;             /* Remove qualquer borda */
+            outline: none !important;            /* Remove o contorno de foco do navegador */
+            box-shadow: none !important;         /* Remove sombras padrão */
+            font-size: 20px;
+            cursor: pointer;
+            color: #999;
+            line-height: 1;
+            padding: 0;
+            margin: 0;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;                  /* Cria um fundo redondo sutil no hover */
+            transition: color 0.15s, background-color 0.15s;
+        }
+        .window-close-btn:hover { 
+            color: #d9534f; /* Muda para um vermelho sutil ao passar o mouse */
+            background-color: rgba(0, 0, 0, 0.05) !important; 
+        }
+        body.dark-theme .window-close-btn:hover { 
+            color: #f2dede; 
+            background-color: rgba(255, 255, 255, 0.1) !important; 
+        }
+
     </style>
 </head>
 <body>
@@ -222,12 +343,12 @@
             <svg class="theme-icon" id="themeIcon" viewBox="0 0 24 24"><path d="M12 18a6 6 0 1 0 0-12 6 6 0 0 0 0 12z"/></svg>
         </button>
 
-        <h1>Arquivos</h1>
+        <h1 id="mainTitle">Arquivos</h1>
         <p class="subtitle" id="subtitleText">Arraste seus arquivos para upload seguro com substituição automática.</p>
 
         <!-- Zona de Arraste e Solte -->
         <div class="drop-zone" id="dropZone">
-            <span class="drop-text" id="dropText">Arraste e solte arquivos aqui</span>
+            <span class="drop-text" id="dropText">Arraste e solte arquivos ou PASTAS completas aqui</span>
             <input type="file" id="fileInput" style="display: none;" multiple>
         </div>
 
@@ -285,6 +406,27 @@
             <div class="modal-buttons">
                 <button class="btn btn-secondary" id="deleteModalCancel">Cancelar</button>
                 <button class="btn btn-primary" style="background-color: #dc3545;" id="deleteModalConfirm">Deletar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== JANELA FLUTUANTE DE RELATÓRIO (Arrastável) ===== -->
+    <div class="floating-window" id="reportWindow">
+        <div class="window-header" id="reportWindowHeader">
+            <span class="window-title">Relatório de Envio</span>
+            <button class="window-close-btn" id="closeReportWindowBtn">&times;</button>
+        </div>
+        <div class="window-content">
+            <p style="font-size: 13px; margin: 0 0 10px; font-weight: bold;">Resultados do lote enviado:</p>
+            <div class="report-lists-container">
+                <div class="report-section">
+                    <div class="section-title text-success">✓ Sucessos (<span id="successCount">0</span>)</div>
+                    <ul class="report-list success-list" id="successList"></ul>
+                </div>
+                <div class="report-section">
+                    <div class="section-title text-danger">✗ Falhas (<span id="failedCount">0</span>)</div>
+                    <ul class="report-list failed-list" id="failedList"></ul>
+                </div>
             </div>
         </div>
     </div>
@@ -366,26 +508,40 @@
         function traverseFileTree(item, relativePath) {
             startScan();
             if (item.isFile) {
-                item.file(file => {
-                    uploadQueue.push({ file, path: relativePath });
-                    endScan();
-                });
+                // Adicionado tratamento de erro na leitura física do arquivo pelo navegador
+                item.file(
+                    file => {
+                        uploadQueue.push({ file, path: relativePath });
+                        endScan();
+                    },
+                    error => {
+                        console.error("Erro ao ler arquivo físico no navegador:", error);
+                        endScan(); // Garante o decremento da fila mesmo se o arquivo falhar
+                    }
+                );
             } else if (item.isDirectory) {
                 const folderName = item.name;
                 createFolderSilently(folderName, relativePath).then(() => {
                     const dirReader = item.createReader();
                     const newPath = relativePath === '' ? folderName : `${relativePath}/${folderName}`;
                     
-                    dirReader.readEntries(entries => {
-                        if (entries.length === 0) {
-                            endScan();
-                        } else {
-                            for (let entry of entries) {
-                                traverseFileTree(entry, newPath);
+                    // Adicionado tratamento de erro na leitura de subpastas do Windows
+                    dirReader.readEntries(
+                        entries => {
+                            if (entries.length === 0) {
+                                endScan();
+                            } else {
+                                for (let entry of entries) {
+                                    traverseFileTree(entry, newPath);
+                                }
+                                endScan();
                             }
-                            endScan();
+                        },
+                        error => {
+                            console.error("Erro ao ler subpasta no navegador:", error);
+                            endScan(); // Garante o decremento da fila mesmo se a pasta falhar
                         }
-                    });
+                    );
                 });
             }
         }
@@ -400,10 +556,14 @@
             });
         }
 
-        // GERENCIADOR DE UPLOAD GLOBAL
+        // =========================================================================
+        // GERENCIADOR DE UPLOAD GLOBAL: Calcula porcentagem total da fila inteira
+        // =========================================================================
         let totalBytes = 0;
         let totalBytesUploaded = 0;
         let queueIndex = 0;
+        let successfulUploads = []; // Guardará objetos {name, path}
+        let failedUploads = [];     // Guardará objetos {name, path}
 
         function startBatchUpload() {
             if (uploadQueue.length === 0) return;
@@ -411,6 +571,10 @@
             totalBytes = 0;
             totalBytesUploaded = 0;
             queueIndex = 0;
+            successfulUploads = [];
+            failedUploads = [];
+            
+            document.getElementById('reportWindow').style.display = 'none';
 
             uploadQueue.forEach(item => { totalBytes += item.file.size; });
 
@@ -439,13 +603,17 @@
                 const uploadStatus = document.getElementById('uploadStatus');
                 
                 progressBar.classList.add('success');
-                uploadStatus.textContent = 'Lote salvo com sucesso!';
+                uploadStatus.textContent = 'Lote concluído!';
                 loadFiles();
 
                 setTimeout(() => {
                     document.getElementById('progressContainer').style.display = 'none';
                     document.getElementById('progressInfo').style.display = 'none';
                 }, 3000);
+
+                if (failedUploads.length > 0) {
+                    showReportWindow();
+                }
                 return;
             }
 
@@ -473,23 +641,117 @@
                 if (xhr.status === 200) {
                     const delta = currentItem.file.size - fileLastLoaded;
                     totalBytesUploaded += delta;
-
-                    queueIndex++;
-                    uploadNextInQueue();
+                    // Salva o nome e a pasta de destino em caso de sucesso
+                    successfulUploads.push({ name: currentItem.file.name, path: currentItem.path });
                 } else {
-                    showError('Erro ao gravar arquivo no lote.');
+                    // Salva o nome e a pasta de destino em caso de erro do servidor
+                    failedUploads.push({ name: currentItem.file.name, path: currentItem.path });
                 }
+                queueIndex++;
+                uploadNextInQueue(); 
             });
 
             xhr.addEventListener('error', () => {
-                showError('Erro ao se conectar com o servidor.');
+                // Salva o nome e a pasta de destino em caso de queda de rede
+                failedUploads.push({ name: currentItem.file.name, path: currentItem.path });
+                queueIndex++;
+                uploadNextInQueue();
             });
 
             xhr.open('POST', `${API}/api/upload`);
             xhr.send(formData);
         }
 
-        // MODAL CRIAR PASTA
+        // Exibir Janela Flutuante de Relatório com Caminho do Arquivo
+        function showReportWindow() {
+            const windowEl = document.getElementById('reportWindow');
+            const successCount = document.getElementById('successCount');
+            const failedCount = document.getElementById('failedCount');
+            const successList = document.getElementById('successList');
+            const failedList = document.getElementById('failedList');
+
+            successCount.textContent = successfulUploads.length;
+            failedCount.textContent = failedUploads.length;
+
+            successList.innerHTML = '';
+            failedList.innerHTML = '';
+
+            // Desenha os sucessos em VERDE (classe text-success)
+            successfulUploads.forEach(item => {
+                const li = document.createElement('li');
+                li.className = 'text-success'; // Aplica a cor verde
+                const pathText = item.path ? ` (em: /${item.path})` : '';
+                li.textContent = `✓ ${item.name}${pathText}`;
+                successList.appendChild(li);
+            });
+
+            // Desenha as falhas em VERMELHO (classe text-danger)
+            failedUploads.forEach(item => {
+                const li = document.createElement('li');
+                li.className = 'text-danger'; // Aplica a cor vermelha
+                const pathText = item.path ? ` (em: /${item.path})` : '';
+                li.textContent = `✗ ${item.name}${pathText}`;
+                failedList.appendChild(li);
+            });
+
+            // Posiciona a janela flutuante padrão no canto superior direito
+            windowEl.style.top = '100px';
+            windowEl.style.left = (window.innerWidth - 340) + 'px';
+            windowEl.style.right = 'auto';
+            
+            // MOSTRA A JANELA ATIVANDO O MODO FLEX (Impede de iniciar aberta na inicialização)
+            windowEl.style.display = 'flex'; 
+        }
+
+        // Fechar janela de relatório
+        document.getElementById('closeReportWindowBtn').onclick = () => {
+            document.getElementById('reportWindow').style.display = 'none';
+        };
+
+        // Torna a janela de relatório arrastável (Draggable) pelo cabeçalho
+        makeElementDraggable(document.getElementById('reportWindow'), document.getElementById('reportWindowHeader'));
+
+        function makeElementDraggable(elmnt, header) {
+            let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
+            if (header) {
+                header.onmousedown = dragMouseDown;
+            } else {
+                elmnt.onmousedown = dragMouseDown;
+            }
+
+            function dragMouseDown(e) {
+                e = e || window.event;
+                if (e.target.classList.contains('window-close-btn')) return; // Evita bugar ao fechar no "X"
+                e.preventDefault();
+                pos3 = e.clientX;
+                pos4 = e.clientY;
+                document.onmouseup = closeDragElement;
+                document.onmousemove = elementDrag;
+            }
+
+            function elementDrag(e) {
+                e = e || window.event;
+                e.preventDefault();
+                pos1 = pos3 - e.clientX;
+                pos2 = pos4 - e.clientY;
+                pos3 = e.clientX;
+                pos4 = e.clientY;
+                
+                let newTop = elmnt.offsetTop - pos2;
+                let newLeft = elmnt.offsetLeft - pos1;
+                
+                elmnt.style.top = newTop + "px";
+                elmnt.style.left = newLeft + "px";
+                elmnt.style.right = "auto"; 
+            }
+
+            function closeDragElement() {
+                document.onmouseup = null;
+                document.onmousemove = null;
+            }
+        }
+
+        // Modal de criação de pasta
         const folderModal = document.getElementById('folderModal');
         const folderInput = document.getElementById('folderModalInput');
 
@@ -534,6 +796,7 @@
             document.getElementById('progressInfo').style.display = 'none';
         }
 
+        // Atualizar Navegação (UI de Botão de Voltar Pasta e Caminho Verde no Subtítulo)
         function updateNavigationUI() {
             const backDirBtn = document.getElementById('backDirBtn');
             const createFolderBtn = document.getElementById('createFolderBtn');
@@ -542,14 +805,12 @@
             if (currentPath === '') {
                 backDirBtn.style.display = 'none';
                 createFolderBtn.style.marginLeft = 'auto';
-                // Mensagem padrão na raiz com cor cinza normal do CSS
                 subtitleText.textContent = "Arraste seus arquivos para upload seguro com substituição automática.";
                 subtitleText.style.color = ''; 
                 subtitleText.style.fontWeight = 'normal';
             } else {
                 backDirBtn.style.display = 'inline-block';
                 createFolderBtn.style.marginLeft = '0';
-                // Substitui o texto pelo caminho em VERDE e em NEGRITO para se localizar melhor
                 subtitleText.textContent = `Caminho atual: /${currentPath}`;
                 subtitleText.style.color = '#1D9E75'; 
                 subtitleText.style.fontWeight = 'bold';
@@ -632,7 +893,6 @@
                 const confirmBtn = document.getElementById('deleteModalConfirm');
                 const cancelBtn = document.getElementById('deleteModalCancel');
 
-                // Mantém o título neutro e limpo, sem dicas de contador
                 titleEl.textContent = title;
                 subtitleEl.textContent = subtitle || '';
                 inputEl.value = '';
@@ -665,7 +925,6 @@
             const repetitions = deleteErrorCount === 0 ? 1 : Math.pow(2, deleteErrorCount);
             
             for (let i = 1; i <= repetitions; i++) {
-                // Título e subtítulos limpos e neutros, sem dicas visuais de repetição
                 let title = `Deseja realmente deletar "${itemName}"?`;
                 let subtitle = `Confirme digitando a sua senha:`;
                 
@@ -676,7 +935,7 @@
                 
                 // Se errar a senha, acresce a penalidade de erro silenciosamente
                 if (!validPasswords.includes(cleanedInput)) {
-                    deleteErrorCount++; // Aumenta o contador exponencial silenciosamente
+                    deleteErrorCount++; 
                     return; // Aborta de forma silenciosa
                 }
             }
@@ -696,10 +955,7 @@
             }
         }
 
-        loadFiles();
-
-
-    // ===== ATALHOS DE TECLADO (Backspace e Esc) =====
+        // ===== ATALHOS DE TECLADO (Backspace e Esc) =====
         document.addEventListener('keydown', (e) => {
             const isTyping = document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA';
 
@@ -710,7 +966,6 @@
                     const cancelBtn = activeModal.querySelector('.btn-secondary');
                     if (cancelBtn) cancelBtn.click();
                 } else {
-                    // Se não houver modal aberto e você estiver em uma subpasta, volta tudo para a raiz
                     if (currentPath !== '') {
                         currentPath = '';
                         loadFiles();
@@ -727,6 +982,8 @@
                 }
             }
         });
+
+        loadFiles();
     </script>
 </body>
 </html>
