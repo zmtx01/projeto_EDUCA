@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from flask import Flask, jsonify, request, render_template, redirect, url_for, make_response, send_from_directory
+from flask import Flask, jsonify, request, render_template, redirect, url_for, make_response
 from werkzeug.exceptions import NotFound
 from werkzeug.utils import secure_filename
 from dotenv import load_dotenv
@@ -10,8 +10,8 @@ import os
 import psycopg2
 import bcrypt
 import tempfile
-import shutil
-import zipfile 
+import zipfile
+from supabase import create_client, Client # Importa o conector do Supabase
 from datetime import datetime, timedelta, UTC
 
 load_dotenv()
@@ -20,22 +20,26 @@ app = Flask(__name__)
 app.json.ensure_ascii = False
 CORS(app)
 
-# --- Configurações de Upload de Arquivos ---
-UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'uploads')
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
-
-# --- Obtenção de Variáveis de Ambiente ---
+# --- Configurações das Variáveis de Ambiente ---
 DB_HOST = os.getenv("DB_HOST", "localhost")
 DB_NAME = os.getenv("DB_NAME", "educa_db")
 DB_USER = os.getenv("DB_USER", "postgres")
 DB_PASSWORD = os.getenv("DB_PASSWORD")
 SECRET_KEY = os.getenv("SECRET_KEY")
 
+SUPABASE_URL = os.getenv("SUPABASE_URL")
+SUPABASE_KEY = os.getenv("SUPABASE_KEY")
+SUPABASE_BUCKET = os.getenv("SUPABASE_BUCKET", "arquivos_educa")
+
 if not SECRET_KEY:
     raise ValueError("Chave secreta (SECRET_KEY) não definida no arquivo .env.")
 if not DB_PASSWORD:
     raise ValueError("Senha do banco de dados (DB_PASSWORD) não definida no arquivo .env.")
+
+# Inicializa o cliente do Supabase se as chaves estiverem presentes
+supabase: Client = None
+if SUPABASE_URL and SUPABASE_KEY:
+    supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 # --- Funções Auxiliares de Segurança e Banco de Dados ---
 
@@ -76,12 +80,12 @@ def validate_admin_token():
         return None
     return payload
 
-# Resolve e higieniza subpastas para evitar travessia de diretório
-def get_safe_path(subpath):
-    if not subpath:
-        return app.config['UPLOAD_FOLDER']
+# Higieniza caminhos para evitar travessia de diretório no Supabase
+def get_safe_supabase_path(subpath, filename=""):
     safe_parts = [secure_filename(p) for p in subpath.split('/') if p.strip() and p.strip() != '..']
-    return os.path.join(app.config['UPLOAD_FOLDER'], *safe_parts)
+    if filename:
+        safe_parts.append(secure_filename(filename))
+    return "/".join(safe_parts)
 
 # --- Rotas para Servir Páginas HTML (Frontend) ---
 
@@ -128,41 +132,51 @@ def logout():
     )
     return response
 
-# --- APIs de Gerenciamento de Arquivos e Pastas ---
+# --- APIs de Gerenciamento de Arquivos e Pastas com SUPABASE STORAGE ---
 
-# 1. LISTAR ARQUIVOS E PASTAS DENTRO DE UM CAMINHO
+# 1. LISTAR ARQUIVOS E PASTAS DO SUPABASE STORAGE
 @app.route('/api/files', methods=['GET'])
 def list_files():
     if not validate_token():
         return jsonify({"message": "Acesso negado."}), 403
     
-    subpath = request.args.get('path', '')
-    target_dir = get_safe_path(subpath)
-
-    if not os.path.exists(target_dir):
-        return jsonify({"message": "Pasta não encontrada."}), 404
+    if not supabase:
+        return jsonify({"message": "Armazenamento Supabase não configurado."}), 500
     
+    subpath = request.args.get('path', '')
+    safe_dir = get_safe_supabase_path(subpath)
+
     try:
-        # CORRIGIDO: Agora usamos 'items' de forma consistente para evitar NameError
-        items = os.listdir(target_dir)
+        # Lista os itens da pasta no bucket do Supabase
+        response = supabase.storage.from_(SUPABASE_BUCKET).list(safe_dir)
         item_list = []
-        for item in items:
-            path = os.path.join(target_dir, item)
-            if os.path.isdir(path):
-                item_list.append({"name": item, "size": "-", "type": "directory"})
-            elif os.path.isfile(path):
-                size = round(os.path.getsize(path) / 1024, 2)
-                item_list.append({"name": item, "size": f"{size} KB", "type": "file"})
+        for item in response:
+            name = item.get('name')
+            if name == '.emptyFolderPlaceholder':
+                continue # Ignora arquivos de marcação vazios do Supabase
+            
+            # No Supabase, itens sem ID interno de metadados são tratados como pastas
+            if item.get('id') is None:
+                item_list.append({"name": name, "size": "-", "type": "directory"})
+            else:
+                meta = item.get('metadata', {})
+                size_bytes = meta.get('size', 0) if meta else 0
+                size_kb = round(size_bytes / 1024, 2)
+                item_list.append({"name": name, "size": f"{size_kb} KB", "type": "file"})
         return jsonify(item_list), 200
     except Exception as e:
-        return jsonify({"message": "Erro ao listar diretório."}), 500
+        print(f"Erro ao listar arquivos: {e}")
+        return jsonify({"message": "Erro ao acessar armazenamento na nuvem."}), 500
 
-# 2. CRIAR NOVA PASTA
+# 2. CRIAR NOVA PASTA NO SUPABASE STORAGE
 @app.route('/api/create-folder', methods=['POST'])
 def create_folder():
     if not validate_token():
         return jsonify({"message": "Acesso negado."}), 403
     
+    if not supabase:
+        return jsonify({"message": "Armazenamento Supabase não configurado."}), 500
+
     data = request.get_json()
     subpath = data.get('path', '')
     folder_name = data.get('name', '').strip()
@@ -170,23 +184,30 @@ def create_folder():
     if not folder_name:
         return jsonify({"message": "Nome da pasta inválido."}), 400
     
-    safe_folder_name = secure_filename(folder_name)
-    target_dir = os.path.join(get_safe_path(subpath), safe_folder_name)
+    # Cria o caminho da pasta com um arquivo marcador vazio para o Supabase reconhecer o diretório
+    safe_path = get_safe_supabase_path(subpath, folder_name)
+    placeholder_path = f"{safe_path}/.emptyFolderPlaceholder"
 
     try:
-        if os.path.exists(target_dir):
-            return jsonify({"message": "Esta pasta já existe neste diretório."}), 409
-        
-        os.makedirs(target_dir, exist_ok=True)
+        # Faz upload de um arquivo marcador vazio para forçar a criação da subpasta na nuvem
+        supabase.storage.from_(SUPABASE_BUCKET).upload(
+            path=placeholder_path,
+            file=b"",
+            file_options={"x-upsert": "true", "content-type": "text/plain"}
+        )
         return jsonify({"message": "Pasta criada com sucesso!"}), 201
     except Exception as e:
-        return jsonify({"message": "Erro ao criar pasta."}), 500
+        print(f"Erro ao criar pasta: {e}")
+        return jsonify({"message": "Erro ao criar pasta na nuvem."}), 500
 
-# 3. UPLOAD SEGURO DENTRO DE SUBPASTAS
+# 3. UPLOAD SEGURO COM RE-GRAVAÇÃO (UPSERT) DIRETAMENTE NO SUPABASE
 @app.route('/api/upload', methods=['POST'])
 def upload_file():
     if not validate_token():
         return jsonify({"message": "Acesso negado."}), 403
+    
+    if not supabase:
+        return jsonify({"message": "Armazenamento Supabase não configurado."}), 500
 
     if 'file' not in request.files:
         return jsonify({"message": "Nenhum arquivo enviado."}), 400
@@ -198,84 +219,143 @@ def upload_file():
         return jsonify({"message": "Nome de arquivo inválido."}), 400
 
     filename = secure_filename(file.filename)
-    target_dir = get_safe_path(subpath)
-    final_path = os.path.join(target_dir, filename)
+    supabase_path = get_safe_supabase_path(subpath, filename)
 
     try:
-        temp_fd, temp_path = tempfile.mkstemp()
-        with os.fdopen(temp_fd, 'wb') as temp_file:
-            file.save(temp_file)
-
-        if os.path.exists(final_path):
-            os.remove(final_path)
+        # Lê os bytes na memória para enviar diretamente (Stateless - Sem salvar no disco local)
+        file_data = file.read()
         
-        shutil.move(temp_path, final_path)
+        # Envia diretamente para o Supabase Storage usando upsert para substituir se já existir
+        supabase.storage.from_(SUPABASE_BUCKET).upload(
+            path=supabase_path,
+            file=file_data,
+            file_options={"x-upsert": "true", "content-type": file.content_type}
+        )
         return jsonify({"message": "Upload concluído com sucesso!"}), 200
     except Exception as e:
-        if 'temp_path' in locals() and os.path.exists(temp_path):
-            os.remove(temp_path)
-        return jsonify({"message": f"Erro de gravação segura: {str(e)}"}), 500
+        print(f"Erro no upload: {e}")
+        return jsonify({"message": "Erro ao salvar arquivo na nuvem."}), 500
 
-# 4. DOWNLOAD DE ARQUIVOS E PASTAS (COMPACTANDO EM ZIP ON-THE-FLY)
+# 4. DOWNLOAD SEGURO DIRETAMENTE DA CDN DO SUPABASE
 @app.route('/api/download', methods=['GET'])
 def download_file():
     if not validate_token():
         return jsonify({"message": "Acesso negado."}), 403
     
+    if not supabase:
+        return jsonify({"message": "Armazenamento Supabase não configurado."}), 500
+
     name = request.args.get('name', '')
     subpath = request.args.get('path', '')
     
     safe_name = secure_filename(name)
-    target_path = os.path.join(get_safe_path(subpath), safe_name)
-    
-    if not os.path.exists(target_path):
-        return jsonify({"message": "Item não encontrado."}), 404
-    
-    if os.path.isdir(target_path):
+    supabase_path = get_safe_supabase_path(subpath, safe_name)
+
+    try:
+        # Se for um arquivo normal, redirecionamos o navegador para baixar direto do link público CDN do Supabase
+        # (Isso economiza banda e deixa o download incrivelmente rápido)
+        # Se for uma pasta, nós baixamos os arquivos e geramos o ZIP em tempo real
+        is_dir = False
         try:
+            # Tenta listar para ver se é uma pasta
+            res = supabase.storage.from_(SUPABASE_BUCKET).list(supabase_path)
+            if len(res) > 0 or (len(res) == 1 and res[0]['name'] == '.emptyFolderPlaceholder'):
+                is_dir = True
+        except:
+            pass
+
+        if is_dir:
+            # COMPACTA PASTA EM ZIP: Baixa todos os arquivos da pasta na nuvem e cria o ZIP na memória
             temp_zip = tempfile.NamedTemporaryFile(delete=False, suffix='.zip')
             temp_zip.close()
             
+            # Função recursiva interna para varrer arquivos no Supabase
+            def zip_supabase_folder(zip_file, cloud_path, local_rel_path=""):
+                items = supabase.storage.from_(SUPABASE_BUCKET).list(cloud_path)
+                for item in items:
+                    item_name = item['name']
+                    if item_name == '.emptyFolderPlaceholder':
+                        continue
+                    
+                    item_cloud_path = f"{cloud_path}/{item_name}" if cloud_path else item_name
+                    item_local_path = os.path.join(local_rel_path, item_name) if local_rel_path else item_name
+                    
+                    if item.get('id') is None: # É pasta
+                        zip_supabase_folder(zip_file, item_cloud_path, item_local_path)
+                    else: # É arquivo
+                        # Baixa o arquivo binário do Supabase
+                        file_data = supabase.storage.from_(SUPABASE_BUCKET).download(item_cloud_path)
+                        # Salva temporariamente para escrever no ZIP
+                        temp_file_fd, temp_file_path = tempfile.mkstemp()
+                        with os.fdopen(temp_file_fd, 'wb') as f:
+                            f.write(file_data)
+                        zip_file.write(temp_file_path, item_local_path)
+                        os.remove(temp_file_path)
+
             with zipfile.ZipFile(temp_zip.name, 'w', zipfile.ZIP_DEFLATED) as zip_file:
-                for root, dirs, files_in_dir in os.walk(target_path):
-                    for file in files_in_dir:
-                        file_path = os.path.join(root, file)
-                        arc_name = os.path.relpath(file_path, target_path)
-                        zip_file.write(file_path, arc_name)
-            
+                zip_supabase_folder(zip_file, supabase_path)
+
             return send_from_directory(
                 os.path.dirname(temp_zip.name),
                 os.path.basename(temp_zip.name),
                 as_attachment=True,
                 download_name=f"{safe_name}.zip"
             )
-        except Exception as e:
-            return jsonify({"message": f"Erro ao compactar pasta: {str(e)}"}), 500
-    else:
-        return send_from_directory(os.path.dirname(target_path), safe_name, as_attachment=True)
+        else:
+            # Baixa arquivo normal diretamente pelo link de download público do Supabase
+            public_url_res = supabase.storage.from_(SUPABASE_BUCKET).get_public_url(supabase_path)
+            return redirect(public_url_res)
+    except Exception as e:
+        print(f"Erro no download: {e}")
+        return jsonify({"message": "Erro ao processar download."}), 500
 
-# 5. DELETAR ARQUIVOS OU PASTAS
+# 5. DELETAR ARQUIVOS OU PASTAS NO SUPABASE STORAGE
 @app.route('/api/files', methods=['DELETE'])
 def delete_item():
     if not validate_token():
         return jsonify({"message": "Acesso negado."}), 403
+    
+    if not supabase:
+        return jsonify({"message": "Armazenamento Supabase não configurado."}), 500
 
-    filename = request.args.get('name', '')
+    name = request.args.get('name', '')
     subpath = request.args.get('path', '')
     
-    safe_name = secure_filename(filename)
-    path = os.path.join(get_safe_path(subpath), safe_name)
+    safe_name = secure_filename(name)
+    supabase_path = get_safe_supabase_path(subpath, safe_name)
 
     try:
-        if os.path.exists(path):
-            if os.path.isdir(path):
-                shutil.rmtree(path)
-            else:
-                os.remove(path)
-            return jsonify({"message": "Item excluído com sucesso."}), 200
-        return jsonify({"message": "Item não encontrado."}), 404
+        # Função interna para deletar tudo dentro de uma pasta na nuvem de forma recursiva
+        def delete_folder_recursive(cloud_path):
+            items = supabase.storage.from_(SUPABASE_BUCKET).list(cloud_path)
+            for item in items:
+                item_name = item['name']
+                item_cloud_path = f"{cloud_path}/{item_name}" if cloud_path else item_name
+                if item.get('id') is None: # É pasta
+                    delete_folder_recursive(item_cloud_path)
+                else: # É arquivo
+                    supabase.storage.from_(SUPABASE_BUCKET).remove([item_cloud_path])
+            # Remove a própria pasta vazia deletando seu marcador
+            supabase.storage.from_(SUPABASE_BUCKET).remove([f"{cloud_path}/.emptyFolderPlaceholder"])
+
+        # Verifica se o item a ser deletado é pasta ou arquivo
+        is_dir = False
+        try:
+            res = supabase.storage.from_(SUPABASE_BUCKET).list(supabase_path)
+            if len(res) > 0 or (len(res) == 1 and res[0]['name'] == '.emptyFolderPlaceholder'):
+                is_dir = True
+        except:
+            pass
+
+        if is_dir:
+            delete_folder_recursive(supabase_path)
+        else:
+            supabase.storage.from_(SUPABASE_BUCKET).remove([supabase_path])
+            
+        return jsonify({"message": "Item excluído da nuvem com sucesso!"}), 200
     except Exception as e:
-        return jsonify({"message": "Erro ao deletar item."}), 500
+        print(f"Erro ao deletar: {e}")
+        return jsonify({"message": "Erro ao excluir item da nuvem."}), 500
 
 # --- APIs de Controle de Usuários e Servidor ---
 
@@ -299,7 +379,7 @@ def init_db():
         conn.commit()
         cur.close()
         conn.close()
-        return jsonify({"message": "Banco de dados inicializado (tabela 'users' verificada/criada)."}), 200
+        return jsonify({"message": "Banco de dados inicializado."}), 200
     except psycopg2.Error as e:
         print(f"Erro ao inicializar DB: {e}")
         return jsonify({"message": "Erro ao criar/verificar tabela no banco de dados."}), 500
