@@ -548,5 +548,22 @@ def api_server_status():
     else:
         return jsonify({"storage_status": "red"}), 200
 
+# ROTA DE MANUTENÇÃO (Keep-Alive): Mantém o Render e o Supabase acordados de forma automática
+@app.route('/api/keep-alive', methods=['GET'])
+def keep_alive():
+    if not supabase:
+        return jsonify({"status": "error", "message": "Supabase não configurado."}), 500
+    
+    try:
+        # Faz uma consulta simples e rápida no Supabase Storage para registrar atividade
+        supabase.storage.from_(SUPABASE_BUCKET).list()
+        return jsonify({
+            "status": "healthy", 
+            "message": "Render e Supabase acordados com sucesso!",
+            "timestamp": datetime.now(UTC).strftime("%Y-%m-%d %H:%M:%S")
+        }), 200
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
