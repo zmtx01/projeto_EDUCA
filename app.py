@@ -10,7 +10,8 @@ import os
 import psycopg2
 import bcrypt
 import tempfile
-import zipfile
+import shutil
+import zipfile 
 from supabase import create_client, Client # Importa o conector do Supabase
 from datetime import datetime, timedelta, UTC
 
@@ -147,7 +148,6 @@ def list_files():
     safe_dir = get_safe_supabase_path(subpath)
 
     try:
-        # Lista os itens da pasta no bucket do Supabase
         response = supabase.storage.from_(SUPABASE_BUCKET).list(safe_dir)
         item_list = []
         for item in response:
@@ -155,7 +155,6 @@ def list_files():
             if name == '.emptyFolderPlaceholder':
                 continue # Ignora arquivos de marcação vazios do Supabase
             
-            # No Supabase, itens sem ID interno de metadados são tratados como pastas
             if item.get('id') is None:
                 item_list.append({"name": name, "size": "-", "type": "directory"})
             else:
@@ -184,12 +183,10 @@ def create_folder():
     if not folder_name:
         return jsonify({"message": "Nome da pasta inválido."}), 400
     
-    # Cria o caminho da pasta com um arquivo marcador vazio para o Supabase reconhecer o diretório
     safe_path = get_safe_supabase_path(subpath, folder_name)
     placeholder_path = f"{safe_path}/.emptyFolderPlaceholder"
 
     try:
-        # Faz upload de um arquivo marcador vazio para forçar a criação da subpasta na nuvem
         supabase.storage.from_(SUPABASE_BUCKET).upload(
             path=placeholder_path,
             file=b"",
@@ -222,10 +219,7 @@ def upload_file():
     supabase_path = get_safe_supabase_path(subpath, filename)
 
     try:
-        # Lê os bytes na memória para enviar diretamente (Stateless - Sem salvar no disco local)
         file_data = file.read()
-        
-        # Envia diretamente para o Supabase Storage usando upsert para substituir se já existir
         supabase.storage.from_(SUPABASE_BUCKET).upload(
             path=supabase_path,
             file=file_data,
@@ -252,12 +246,8 @@ def download_file():
     supabase_path = get_safe_supabase_path(subpath, safe_name)
 
     try:
-        # Se for um arquivo normal, redirecionamos o navegador para baixar direto do link público CDN do Supabase
-        # (Isso economiza banda e deixa o download incrivelmente rápido)
-        # Se for uma pasta, nós baixamos os arquivos e geramos o ZIP em tempo real
         is_dir = False
         try:
-            # Tenta listar para ver se é uma pasta
             res = supabase.storage.from_(SUPABASE_BUCKET).list(supabase_path)
             if len(res) > 0 or (len(res) == 1 and res[0]['name'] == '.emptyFolderPlaceholder'):
                 is_dir = True
@@ -265,11 +255,9 @@ def download_file():
             pass
 
         if is_dir:
-            # COMPACTA PASTA EM ZIP: Baixa todos os arquivos da pasta na nuvem e cria o ZIP na memória
             temp_zip = tempfile.NamedTemporaryFile(delete=False, suffix='.zip')
             temp_zip.close()
             
-            # Função recursiva interna para varrer arquivos no Supabase
             def zip_supabase_folder(zip_file, cloud_path, local_rel_path=""):
                 items = supabase.storage.from_(SUPABASE_BUCKET).list(cloud_path)
                 for item in items:
@@ -283,9 +271,7 @@ def download_file():
                     if item.get('id') is None: # É pasta
                         zip_supabase_folder(zip_file, item_cloud_path, item_local_path)
                     else: # É arquivo
-                        # Baixa o arquivo binário do Supabase
                         file_data = supabase.storage.from_(SUPABASE_BUCKET).download(item_cloud_path)
-                        # Salva temporariamente para escrever no ZIP
                         temp_file_fd, temp_file_path = tempfile.mkstemp()
                         with os.fdopen(temp_file_fd, 'wb') as f:
                             f.write(file_data)
@@ -302,7 +288,6 @@ def download_file():
                 download_name=f"{safe_name}.zip"
             )
         else:
-            # Baixa arquivo normal diretamente pelo link de download público do Supabase
             public_url_res = supabase.storage.from_(SUPABASE_BUCKET).get_public_url(supabase_path)
             return redirect(public_url_res)
     except Exception as e:
@@ -325,7 +310,6 @@ def delete_item():
     supabase_path = get_safe_supabase_path(subpath, safe_name)
 
     try:
-        # Função interna para deletar tudo dentro de uma pasta na nuvem de forma recursiva
         def delete_folder_recursive(cloud_path):
             items = supabase.storage.from_(SUPABASE_BUCKET).list(cloud_path)
             for item in items:
@@ -335,10 +319,8 @@ def delete_item():
                     delete_folder_recursive(item_cloud_path)
                 else: # É arquivo
                     supabase.storage.from_(SUPABASE_BUCKET).remove([item_cloud_path])
-            # Remove a própria pasta vazia deletando seu marcador
             supabase.storage.from_(SUPABASE_BUCKET).remove([f"{cloud_path}/.emptyFolderPlaceholder"])
 
-        # Verifica se o item a ser deletado é pasta ou arquivo
         is_dir = False
         try:
             res = supabase.storage.from_(SUPABASE_BUCKET).list(supabase_path)
