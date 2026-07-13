@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from flask import Flask, jsonify, request, render_template, redirect, url_for, make_response
+from flask import Flask, jsonify, request, render_template, redirect, url_for, make_response, send_from_directory
 from werkzeug.exceptions import NotFound
 from werkzeug.utils import secure_filename
 from dotenv import load_dotenv
