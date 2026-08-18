@@ -557,10 +557,19 @@ def mago_page():
 # 2. Rota inteligente de redirecionamento de imagens de mídia do Mago
 @app.route('/<filename>')
 def serve_mago_media(filename):
-    # Se a requisição for uma imagem do Mago, serve direto da pasta static/mago
-    if filename.lower().endswith(('.png', '.jpg', '.jpeg', '.gif')):
-        return send_from_directory('static/mago', filename)
-    # Se não for, repassa o erro 404 padrão
+    # Procura a imagem de forma insensível a maiúsculas/minúsculas 
+    # para corrigir de forma automática diferenças de .PNG vs .png ou CENARIO vs cenario
+    static_dir = os.path.join(app.root_path, 'static', 'mago')
+    try:
+        if os.path.exists(static_dir):
+            files = os.listdir(static_dir)
+            for f in files:
+                # Compara ambos os nomes em letras minúsculas na memória
+                if f.lower() == filename.lower():
+                    return send_from_directory(static_dir, f)
+    except Exception as e:
+        print(f"Erro ao buscar imagem do mago: {e}")
+        
     raise NotFound()
 
 if __name__ == '__main__':
