@@ -244,7 +244,8 @@ function calcularCamera() {
 }
 
 function drawCenario() {
-    if (!cenarioImg.complete) return;
+    // CORREÇÃO: Evita que o jogo trave por completo se o arquivo de cenário falhar no carregamento
+    if (!cenarioImg.complete || cenarioImg.naturalWidth === 0) return;
     const cw = window.canvas.width;
     const ch = window.canvas.height;
     const viewWidth = cw / window.scale;
@@ -252,7 +253,6 @@ function drawCenario() {
     window.ctx.clearRect(0, 0, cw, ch);
     window.ctx.drawImage(cenarioImg, window.offsetX, window.offsetY, viewWidth, viewHeight, 0, 0, cw, ch);
 }
-
 // Raios Ambientais
 function spawnRaio() {
     const cw = window.canvas.width; const ch = window.canvas.height;

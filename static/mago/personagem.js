@@ -192,7 +192,8 @@ function movePlayer() {
 
 function drawPlayer() {
     const imageToDraw = playerImage;
-    if (!imageToDraw || !imageToDraw.complete) return;
+    // CORREÇÃO: Evita que o jogo trave por completo se a imagem do mago falhar no carregamento
+    if (!imageToDraw || !imageToDraw.complete || imageToDraw.naturalWidth === 0) return;
     let inclination = 0;
     let playerAnimationOffsetY = 0;
     const moving = window.player.x !== lastX;
