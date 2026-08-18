@@ -27,7 +27,9 @@ p2StaffImage.onload = () => {
   p2StaffHeight = p2StaffImage.height * p2StaffScale;
 };
 
-const SERVER_URL = `ws://${window.location.hostname}:3000`;
+const SERVER_URL = window.location.protocol === 'https:' 
+    ? 'wss://projeto-mago.onrender.com' 
+    : `ws://${window.location.hostname}:3000`;
 window.socket = null;
 
 window.multiplayer = {
