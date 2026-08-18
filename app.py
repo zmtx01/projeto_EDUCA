@@ -546,6 +546,22 @@ def keep_alive():
         }), 200
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
+    
+# --- ROTAS INTEGRADAS DO JOGO DO MAGO COOPERATIVO ---
+
+# 1. Rota para servir a página do jogo
+@app.route('/mago')
+def mago_page():
+    return render_template('mago.html')
+
+# 2. Rota inteligente de redirecionamento de imagens de mídia do Mago
+@app.route('/<filename>')
+def serve_mago_media(filename):
+    # Se a requisição for uma imagem do Mago, serve direto da pasta static/mago
+    if filename.lower().endswith(('.png', '.jpg', '.jpeg', '.gif')):
+        return send_from_directory('static/mago', filename)
+    # Se não for, repassa o erro 404 padrão
+    raise NotFound()
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)

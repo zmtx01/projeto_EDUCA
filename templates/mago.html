@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title> Menu Wizz</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { background: #110e10; min-height: 100vh; display:flex; justify-content:center; align-items:center; font-family: 'Arial', sans-serif; overflow:hidden; cursor:none; user-select: none; }
+#multiplayer-lobby-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: white; z-index: 80000; display: none; }
+#menu { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: left; z-index: 400; }
+.wizz-text { font-size: 140px; font-weight: bold; text-transform: uppercase; letter-spacing: 10px; position: relative; user-select: none; color: transparent; background: radial-gradient(circle at var(--mouse-x, -250%) var(--mouse-y, -250%), rgb(174, 0, 255) 10%, rgba(174,0,255,0.6) 15%, rgba(174,0,255,0.2) 25%, transparent 30%), radial-gradient(circle at var(--icircle1-x, -2000%) var(--icircle1-y, -2000%), rgba(174,0,255,0.8) 10%, rgba(174,0,255,0.4) 25%, transparent 90%), radial-gradient(circle at var(--icircle2-x, -2000%) var(--icircle2-y, -2000%), rgba(174,0,255,0.8) 10%, rgba(174,0,255,0.4) 25%, transparent 90%), radial-gradient(circle at var(--icircle3-x, -2000%) var(--icircle3-y, -2000%), rgba(174,0,255,0.8) 10%, rgba(174,0,255,0.4) 25%, transparent 90%), radial-gradient(circle at var(--icircle4-x, -2000%) var(--icircle4-y, -2000%), rgba(174,0,255,0.8) 10%, rgba(174,0,255,0.4) 25%, transparent 90%); background-clip: text; -webkit-background-clip: text; -webkit-text-fill-color: transparent; transition: all 0.1s ease; }
+.pixel-text { font-family: 'Courier New', monospace; font-size: 32px; color: white; margin-top: -10px; letter-spacing: 20px; text-shadow: 0 0 5px white, 0 0 10px white; }
+.i-circle { position: absolute; width:30px; height:30px; border-radius:50%; background: rgba(0, 0, 0, 0.1); border: .5px solid rgba(0, 255, 255, 0.1); pointer-events:none; transform: translate(-50%, -50%); transition: all 0.3s ease; z-index:5; }
+.i-circle.lit { background: radial-gradient(circle at center, rgba(0,255,255,0.8) 33%, rgba(0,200,255,0.4) 40%, transparent 70%); box-shadow:0 0 25px rgba(0,255,255,0.7); }
+.flashlight-cursor { position: fixed; width: 60px; height: 60px; pointer-events:none; z-index:50; transform: translate(-50%, -50%); }
+.flashlight-cursor::before { content:''; position:absolute; top:50%; left:50%; width:40px; height:40px; background: radial-gradient(circle at center, rgba(0,255,255,0.8) 0%, rgba(0,200,255,0.4) 40%, transparent 70%); border-radius:50%; transform: translate(-50%,-50%); box-shadow:0 0 20px rgba(0,255,255,0.6); }
+.flashlight-cursor::after { content:''; position:absolute; top:50%; left:50%; width:20px; height:20px; background:#00ffff; border-radius:50%; transform: translate(-50%,-50%); box-shadow:0 0 10px rgba(0,255,255,0.8); }
+.cursor-light { position: fixed; width:300px; height:300px; border-radius:50%; background: radial-gradient(circle at center, rgba(0,255,255,0.2) 0%, rgba(0,200,255,0.1) 30%, transparent 70%); pointer-events:none; transform: translate(-50%,-50%); opacity:0; transition: opacity 0.1s linear; z-index:10; }
+.cursor-light.active { opacity:1; }
+canvas { display:block; position:fixed; top:0; left:0; z-index:0; }
+#game-cursor { position: fixed; width: 10px; height: 10px; background-color: yellow; border-radius: 50%; box-shadow: 0 0 15px yellow; pointer-events: none; z-index: 100001; display: none; transform: translate(-50%, -50%); transition: background-color 0.2s, box-shadow 0.2s; }
+#game-cursor.auto-mode { background-color: red; box-shadow: 0 0 15px red; }
+#save-slots-container { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); margin-top: 80px; z-index: 200; display: flex; align-items: center; gap: 15px; padding: 10px; border-radius: 5px; display: none; }
+.save-slot { position: relative; overflow: hidden; padding: 10px 15px; background-color: rgba(20, 20, 20, 0.8); color: #ccc; border: 1px solid #555; cursor: none; font-family: 'Courier New', monospace; font-size: 14px; text-align: center; min-width: 220px; transition: all 0.2s; border-radius: 4px; }
+.save-slot:hover { background-color: rgba(255,255,255,0.1); border-color: #aaa; }
+.save-slot.delete-mode-active { color: yellow; }
+.save-slot.delete-mode-empty { opacity: 0.5; pointer-events: none; }
+.save-slot .progress-bar { position: absolute; bottom: 0; left: 0; width: 100%; height: 0%; background-color: var(--progress-bar-bg, rgba(0, 255, 0, 0.4)); transition: height 0.1s linear; pointer-events: none; }
+#save-instructions { color: #999; font-family: 'Courier New', monospace; font-size: 13px; text-align: right; padding-right: 15px; opacity: 0; transition: opacity 0.3s ease; pointer-events: none; position: absolute; right: 100%; white-space: nowrap; }
+#multiplayer-ui { position: fixed; top: 25px; right: 100px; z-index: 300; font-family: 'Courier New', monospace; color: white; text-shadow: 0 0 5px white, 0 0 10px white; display: flex; align-items: center; gap: 15px; display: none; }
+#multiplayer-ui .mp-btn { font-family: inherit; font-size: 24px; color: inherit; text-shadow: inherit; background: none; border: none; cursor: none; padding: 5px 10px; }
+#multiplayer-ui .mp-btn:hover { color: cyan; text-shadow: 0 0 8px cyan, 0 0 15px cyan; }
+#multiplayer-ui .connecting-state { color: cyan !important; text-shadow: 0 0 8px cyan, 0 0 15px cyan !important; }
+#multiplayer-ui .mp-status-text { font-size: 20px; }
+</style>
+</head>
+<body>
+<div id="menu">
+    <h1 class="wizz-text">wizz</h1>
+    <p class="pixel-text">Start.</p>
+    <div class="i-circle" id="iCircle1" style="left:162px; top:10px;"></div>
+    <div class="i-circle" id="iCircle2" style="left:360px; top:90px;"></div>
+    <div class="i-circle" id="iCircle3" style="left:66px; top:120px;"></div>
+    <div class="i-circle" id="iCircle4" style="left:230px; top:180px;"></div>
+</div>
+<div id="save-slots-container">
+    <div id="save-instructions">
+        <span id="instr-normal">Shift+Hold: Salvar<br>Alt+Click: Carregar</span>
+        <span id="instr-delete" style="display: none;">Shift+Hold: Deletar</span>
+    </div>
+    <button id="save-slot-1" class="save-slot"><span>Slot 1</span><div class="progress-bar"></div></button>
+    <button id="save-slot-2" class="save-slot"><span>Slot 2</span><div class="progress-bar"></div></button>
+    <button id="save-slot-3" class="save-slot"><span>Slot 3</span><div class="progress-bar"></div></button>
+    <button id="clear-button" class="save-slot" style="min-width: 80px;">Limpar</button>
+</div>
+
+<div id="multiplayer-ui"></div>
+<div id="multiplayer-lobby-screen"></div>
+
+<div class="flashlight-cursor"></div>
+<div class="cursor-light"></div>
+<canvas id="gameCanvas"></canvas>
+<div id="game-cursor"></div>
+
+<script>
+    const cacheBuster = `?v=${new Date().getTime()}`;
+    const scripts = [
+        'tela.js', 'grama.js', 'personagem.js', 'colisao.js', 'cajado.js', 
+        'monstro.js', 'mov_monstros.js', 'runa.js', 'save.js', 'tela_multiplayer.js'
+    ];
+    scripts.forEach(src => {
+        // CORREÇÃO: Força a leitura de scripts da pasta estática do Flask (/static/mago/)
+        document.write(`<script src="/static/mago/${src}${cacheBuster}"><\/script>`);
+    });
+</script>
+
+<script>
+    document.addEventListener('contextmenu', event => event.preventDefault());
+</script>
+</body>
+</html>
