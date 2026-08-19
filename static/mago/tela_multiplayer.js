@@ -32,7 +32,7 @@ const isLocal = window.location.hostname === 'localhost' || window.location.host
 
 const SERVER_URL = isLocal 
     ? `${protocol}${window.location.hostname}:3000` 
-    : `https://projeto-educa-zmtx.onrender.com/mago`; // <--- Coloque aqui a URL que você vai criar no Passo B
+    : `wss://projeto-mago.onrender.com`; // <--- Garanta que está exatamente assim no arquivo online do site
 window.socket = null;
 
 window.multiplayer = {
