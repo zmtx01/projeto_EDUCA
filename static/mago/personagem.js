@@ -81,7 +81,19 @@ function levelUpPlayer() {
     const player = window.player;
     player.level++;
     player.xp -= player.xpMax;
-    player.xpMax = Math.floor(player.xpMax * 1.5);
+    
+    // --- Nova Fórmula de XP (4 Rampas de Dificuldade) ---
+    const N = player.level;
+    if (N >= 1 && N <= 5) {
+        player.xpMax = Math.floor(10 * (50 * N + 50));
+    } else if (N >= 6 && N <= 15) {
+        player.xpMax = Math.floor(10 * (100 * Math.pow(N, 1.2)));
+    } else if (N >= 16 && N <= 30) {
+        player.xpMax = Math.floor(10 * (200 * Math.pow(N, 1.3)));
+    } else if (N >= 31) {
+        player.xpMax = Math.floor(10 * (500 * Math.pow(N, 1.1)));
+    }
+    
     player.vidaMax += 10;
     player.vida = player.vidaMax;
     player.attack += 5;
@@ -192,8 +204,7 @@ function movePlayer() {
 
 function drawPlayer() {
     const imageToDraw = playerImage;
-    // CORREÇÃO: Evita que o jogo trave por completo se a imagem do mago falhar no carregamento
-    if (!imageToDraw || !imageToDraw.complete || imageToDraw.naturalWidth === 0) return;
+    if (!imageToDraw || !imageToDraw.complete) return;
     let inclination = 0;
     let playerAnimationOffsetY = 0;
     const moving = window.player.x !== lastX;

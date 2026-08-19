@@ -11,7 +11,7 @@ const isBrowser = typeof window !== 'undefined';
 // Afeta o Singleplayer e o Multiplayer simultaneamente!
 // =================================================================
 const MAX_ON_SCREEN_MONSTERS = 18; // Limite centralizado de monstros na tela
-
+const MONSTER_FALL_MULTIPLIER = 3; // Altere este número para mudar a velocidade nos dois modos de uma só vez!
 
 // =================================================================
 // [1] =================== ATRIBUTOS BASE ===========================
@@ -198,12 +198,14 @@ if (isBrowser) {
     window.Monstro = Monstro;
     window.Monstro.configPadrao = configPadrao;
     window.getHordeConfig = getHordeConfig;
-    window.MAX_ON_SCREEN_MONSTERS = MAX_ON_SCREEN_MONSTERS; // Exporta limite centralizado
+    window.MAX_ON_SCREEN_MONSTERS = MAX_ON_SCREEN_MONSTERS;
+    window.MONSTER_FALL_MULTIPLIER = MONSTER_FALL_MULTIPLIER; // <--- ADICIONE ESTA LINHA
 } else {
     module.exports = {
         Monstro,
         configPadrao,
         getHordeConfig,
-        MAX_ON_SCREEN_MONSTERS // Exporta limite centralizado para Node.js
+        MAX_ON_SCREEN_MONSTERS,
+        MONSTER_FALL_MULTIPLIER // <--- ADICIONE ESTA LINHA
     };
 }

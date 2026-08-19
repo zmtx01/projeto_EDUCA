@@ -1,5 +1,5 @@
 // =================================================================
-// TELA_MULTIPLAYER.JS (Gerenciamento, Conexão e Interpolação de Rede)
+// TELA_MULTIPLAYER.JS (Gerenciamento, Conexão e Interpolação para até 4 Players)
 // =================================================================
 
 window.otherPlayers = {};
@@ -27,9 +27,7 @@ p2StaffImage.onload = () => {
   p2StaffHeight = p2StaffImage.height * p2StaffScale;
 };
 
-const SERVER_URL = window.location.protocol === 'https:' 
-    ? 'wss://projeto-mago.onrender.com' 
-    : `ws://${window.location.hostname}:3000`;
+const SERVER_URL = `ws://${window.location.hostname}:3000`;
 window.socket = null;
 
 window.multiplayer = {
@@ -37,9 +35,13 @@ window.multiplayer = {
     playerNumber: null,
     p1Connected: false,
     p2Connected: false,
+    p3Connected: false,
+    p4Connected: false,
     errorMessage: '',
     p1TakeoverReady: false,
     p2TakeoverReady: false,
+    p3TakeoverReady: false,
+    p4TakeoverReady: false
 };
 
 window.waitingForOtherPlayer = false;
@@ -49,6 +51,7 @@ window.gameActive = false;
 
 const mpUI = document.getElementById('multiplayer-ui');
 
+// UI Dinâmica e reestruturada para suportar até 4 jogadores e substituições
 function updateMultiplayerUI() {
     if (!mpUI) return;
     let content = '';
@@ -59,13 +62,19 @@ function updateMultiplayerUI() {
             if (window.multiplayer.errorMessage) {
                 if (window.multiplayer.errorMessage === 'Servidor cheio.') {
                     content += `<span class="mp-status-text">Lobby Cheio | </span>`;
-                    if (window.multiplayer.p1TakeoverReady) {
-                        content += '<button id="mp-takeover-1" class="mp-btn">Assumir Mago 1</button>';
+                    
+                    // Varre os 4 slots e gera os botões de Takeover dinamicamente
+                    for (let s = 1; s <= 4; s++) {
+                        if (window.multiplayer[`p${s}TakeoverReady`]) {
+                            content += `<button id="mp-takeover-${s}" class="mp-btn">Assumir Mago ${s}</button>`;
+                        }
                     }
-                    if (window.multiplayer.p2TakeoverReady) {
-                        content += '<button id="mp-takeover-2" class="mp-btn">Assumir Mago 2</button>';
+                    
+                    let anyTakeover = false;
+                    for (let s = 1; s <= 4; s++) {
+                        if (window.multiplayer[`p${s}TakeoverReady`]) anyTakeover = true;
                     }
-                    if (!window.multiplayer.p1TakeoverReady && !window.multiplayer.p2TakeoverReady) {
+                    if (!anyTakeover) {
                         content += `<span class="mp-status-text">Partida em andamento. Aguarde...</span>`;
                     }
                 } else {
@@ -84,15 +93,33 @@ function updateMultiplayerUI() {
             break;
             
         case 'online':
-            // Se o jogo já estiver ativo, esconde o botão "Start"
             if (window.gameActive) {
-                content = `<span class="mp-status-text">P1 Conectado | P2 Conectado</span>`;
+                // Lista resumida e dinâmica de quem está ativo na tela de P1 a P4
+                let connectedList = [];
+                for (let s = 1; s <= 4; s++) {
+                    if (window.multiplayer[`p${s}Connected`]) {
+                        connectedList.push(`P${s}`);
+                    }
+                }
+                content = `<span class="mp-status-text">${connectedList.join(', ')} Ativos</span>`;
             } else {
-                if (window.multiplayer.p1Connected && window.multiplayer.p2Connected) {
-                    content = `<button id="mp-start-button" class="mp-btn">Start</button><span class="mp-status-text">| P1 Conectado | P2 Conectado</span>`;
+                // O Player 1 (Host do Lobby) possui o botão Start físico
+                if (window.multiplayer.playerNumber === 1) {
+                    let list = [];
+                    for (let s = 1; s <= 4; s++) {
+                        if (window.multiplayer[`p${s}Connected`]) {
+                            list.push(`P${s}`);
+                        }
+                    }
+                    content = `<button id="mp-start-button" class="mp-btn">Start</button><span class="mp-status-text">| Lobby: ${list.join(', ')}</span>`;
                 } else {
-                    let statusText = window.multiplayer.p1Connected ? 'P1 Conectado' : 'P2 Conectado';
-                    content = `<span class="mp-status-text">${statusText} | Aguardando...</span>`;
+                    let list = [];
+                    for (let s = 1; s <= 4; s++) {
+                        if (window.multiplayer[`p${s}Connected`]) {
+                            list.push(`P${s}`);
+                        }
+                    }
+                    content = `<span class="mp-status-text">Lobby: ${list.join(', ')} | Aguardando Host...</span>`;
                 }
             }
             break;
@@ -112,7 +139,6 @@ function showMultiplayerLobbyScreen() {
     const menu = document.getElementById('menu');
     if (menu) menu.style.display = 'none';
     
-    // CORREÇÃO: Garante que os quadrados de salvamento fiquem ocultos ao carregar a tela de Lobby
     const saveContainer = document.getElementById('save-slots-container');
     if (saveContainer) saveContainer.style.display = 'none';
     
@@ -168,8 +194,6 @@ function connectToServer() {
     
     window.isMultiplayer = true;
     
-    // CORREÇÃO CRUCIAL: Esconde em definitivo os quadrados de salvamento 
-    // no exato microssegundo em que o clique de conexão de rede é iniciado
     const saveContainer = document.getElementById('save-slots-container');
     if (saveContainer) saveContainer.style.display = 'none';
     
@@ -196,7 +220,6 @@ function connectToServer() {
                         localStorage.setItem('wizz_mp_token', message.payload.token);
                     }
                     
-                    // CORREÇÃO: Limpa em definitivo todo o lixo e projéteis offline anteriores antes de desenhar a reconexão
                     if (typeof window.resetPlayerStats === 'function') {
                         window.resetPlayerStats();
                     }
@@ -204,29 +227,23 @@ function connectToServer() {
                     updateMultiplayerUI();
                     break;
                 case 'update-player-status':
-                    window.multiplayer.p1Connected = message.payload.p1Connected;
-                    window.multiplayer.p2Connected = message.payload.p2Connected;
-                    window.multiplayer.p1TakeoverReady = message.payload ? message.payload.p1TakeoverReady : false;
-                    window.multiplayer.p2TakeoverReady = message.payload ? message.payload.p2TakeoverReady : false;
+                    // Sincroniza dinamicamente as conexões e slots para os 4 jogadores
+                    for (let s = 1; s <= 4; s++) {
+                        window.multiplayer[`p${s}Connected`] = message.payload[`p${s}Connected`];
+                        window.multiplayer[`p${s}TakeoverReady`] = message.payload[`p${s}TakeoverReady`];
+                    }
                     if (window.multiplayer.state === 'online') {
                         updateMultiplayerUI();
                     }
                     break;
                 case 'game-full':
-                    window.multiplayer.errorMessage = 'Servidor cheio.';
-                    window.multiplayer.state = 'disconnected';
-                    window.multiplayer.p1TakeoverReady = message.payload ? message.payload.p1TakeoverReady : false;
-                    window.multiplayer.p2TakeoverReady = message.payload ? message.payload.p2TakeoverReady : false;
-                    updateMultiplayerUI();
-                    // CORREÇÃO: Não fecha mais o socket na máquina do visitante para permitir que ele assuma o mago por inatividade
-                    break;
                 case 'server-full':
                     window.multiplayer.errorMessage = 'Servidor cheio.';
                     window.multiplayer.state = 'disconnected';
-                    window.multiplayer.p1TakeoverReady = message.payload.p1TakeoverReady;
-                    window.multiplayer.p2TakeoverReady = message.payload.p2TakeoverReady;
+                    for (let s = 1; s <= 4; s++) {
+                        window.multiplayer[`p${s}TakeoverReady`] = message.payload ? message.payload[`p${s}TakeoverReady`] : false;
+                    }
                     updateMultiplayerUI();
-                    // CORREÇÃO: Mantém o socket do visitante aberto para permitir cliques em "Assumir Mago"
                     break;
                 case 'prepare-to-start':
                     window.isReadyToStart = true;
@@ -363,7 +380,6 @@ function connectToServer() {
                     }
                     break;
                 case 'game-state-sync':
-                    // CORREÇÃO CRUCIAL: Se recebemos a sincronia de estado periódica, o jogo está ativo e rodando!
                     const wasActive = window.gameActive;
                     window.gameActive = true;
 
@@ -375,17 +391,14 @@ function connectToServer() {
                         window.ordaAtual = message.payload.currentHorde;
                         window.mpMonsterStockLength = message.payload.monsterStockLength;
 
-                        // Sincroniza a pausa universal vinda do servidor na sua aba que acabou de voltar
                         window.isPaused = message.payload.isPaused;
                         if (typeof window.updatePauseUI === 'function') {
                             window.updatePauseUI(window.isPaused);
                         }
                     }
 
-                    // CORREÇÃO VISUAL: Sincroniza o painel de lobby de rede dinamicamente
                     updateMultiplayerUI();
 
-                    // CORREÇÃO VISUAL DE RECONEXÃO: Se a página foi atualizada, esconde os menus antigos de lobby de forma imediata e inicia a renderização ativa!
                     if (!wasActive) {
                         const menu = document.getElementById('menu');
                         if (menu) menu.style.display = 'none';
@@ -432,9 +445,7 @@ function connectToServer() {
                     }
                     break;
 
-                // ESCUTADORES DA FRENTE 2 (Upgrades Especiais):
-
-                // Sangramento (Gera as partículas de sangue escorrendo no cliente)
+                // Escutadores de partículas e upgrades de rede
                 case 'spawn-blood-particles':
                     if (window.particles) {
                         const px = message.payload.x;
@@ -453,14 +464,12 @@ function connectToServer() {
                     }
                     break;
 
-                // Reflexão (Gera o efeito de fagulhas vermelhas ao colidir por toque)
                 case 'spawn-impact':
                     if (typeof window.criarImpacto === 'function') {
                         window.criarImpacto(message.payload.x, message.payload.y, message.payload.color || 'red', 1.2);
                     }
                     break;
 
-                // Fragmentação (Explode em pequenos espinhos roxos ao morrer no servidor)
                 case 'spawn-fragment-projectiles':
                     const payload = message.payload;
                     if (window.hibridProjectiles) {
@@ -486,7 +495,6 @@ function connectToServer() {
                     }
                     break;
 
-                // CORREÇÃO: Resgate de Atributos do mago reconectado vindos diretamente do banco de dados do servidor
                 case 'player-stats-sync':
                     if (window.player && message.payload) {
                         Object.assign(window.player, message.payload);
@@ -529,11 +537,10 @@ if (mpUI) {
             sendMessage('request-start-game');
         }
 
-        if (target.id === 'mp-takeover-1') {
-            sendMessage('request-takeover', { slot: 1 });
-        }
-        if (target.id === 'mp-takeover-2') {
-            sendMessage('request-takeover', { slot: 2 });
+        // Lida com qualquer botão de takeover dinâmico (mp-takeover-1 ao mp-takeover-4)
+        if (target.id.startsWith('mp-takeover-')) {
+            const slot = parseInt(target.id.split('-')[2]);
+            sendMessage('request-takeover', { slot });
         }
     }); 
 }
@@ -564,6 +571,7 @@ function updateOtherPlayers(deltaTime) {
 }
 window.updateOtherPlayers = updateOtherPlayers;
 
+// IA de mira dinâmica compatível com até 4 jogadores na mesma arena
 function updateClientMonsters(deltaTime) {
     const now = Date.now();
     const interpolationPeriod = (1000 / 30) * 1.5;
@@ -598,6 +606,7 @@ function updateClientMonsters(deltaTime) {
             let targetPlayer = window.player;
             let closestDist = Math.hypot(m.x - window.player.x, m.y - window.player.y);
 
+            // Varre todos os outros parceiros conectados para disparar no alvo mais próximo
             for (const id in window.otherPlayers) {
                 const other = window.otherPlayers[id];
                 const otherDist = Math.hypot(m.x - other.x, m.y - other.y);
@@ -693,6 +702,7 @@ function circleRectCollision(cx, cy, r, rx, ry, rw, rh) {
     return (dx * dx + dy * dy) < (r * r);
 }
 
+// Renderiza dinamicamente qualquer quantidade de companheiros adicionais com fallback seguro de sprites
 function drawOtherPlayers() {
     if (!window.otherPlayers || !window.player) return;
     const ctx = window.ctx;
@@ -742,9 +752,6 @@ function drawOtherPlayers() {
             ctx.restore();
         }
     }
-
-    // O BLOCO VISUAL DE ESPERA 'Waiting for other player...' FOI REMOVIDO COMPLETAMENTE A PEDIDO DO USUÁRIO
-    // Nenhuma mensagem ou overlay escuro de espera será renderizado no meio da tela a partir de agora
 
     for (const p of mpMonstroProjectiles) {
         const screenX = (p.x - window.offsetX) * window.scale;
@@ -802,28 +809,11 @@ window.broadcastScenarioLightning = function(novoRaio) {
     sendMessage('scenario-lightning-spawned', novoRaio);
 };
 
-// CORREÇÃO DE SEGURANÇA: Salva e preserva a função de contador offline original para usá-la quando não estiver no modo multiplayer
+// Preserva o fallback offline intacto para não dar conflito ao desativar o contador antigo
 const originalDrawMonstroCounter = window.drawMonstroCounter;
 window.drawMonstroCounter = function() {
     if (window.isMultiplayer) {
-        const ctx = window.ctx;
-        ctx.save();
-        ctx.font = "18px Arial";
-        ctx.fillStyle = "white";
-        ctx.textAlign = "right";
-        ctx.textBaseline = "top";
-        const padding = 20;
-        const x = (window.canvas?.width || 1024) - padding;
-        const y = padding;
-        
-        const telaAtivos = window.monstros.length;
-        const totalRestante = window.mpMonsterStockLength || 0;
-        const ordaAtual = window.ordaAtual || 1;
-        
-        ctx.fillText(`Orda (NET): ${ordaAtual}`, x, y);
-        ctx.fillText(`Tela (NET): ${telaAtivos}`, x, y + 22);
-        ctx.fillText(`Restante: ${totalRestante}`, x, y + 44);
-        ctx.restore();
+        // Desativado por padrão a favor do drawWaveCounter() limpo
     } else if (typeof originalDrawMonstroCounter === 'function') {
         originalDrawMonstroCounter();
     }
@@ -846,7 +836,7 @@ function lineCircleIntersectionLocal(x1, y1, x2, y2, cx, cy, cr) {
     return false;
 }
 
-// Nova colisão de projéteis de mago versus projéteis locais de monstros ativos no multiplayer
+// Colisão de projéteis de mago versus projéteis locais de monstros ativos no multiplayer
 function checkColisoesProjeteisMagoVsMonstroProjeteis() {
     const projMagos = window.projectiles || [];
     if (!projMagos.length || !mpMonstroProjectiles.length) return;
@@ -858,18 +848,14 @@ function checkColisoesProjeteisMagoVsMonstroProjeteis() {
         for (let k = mpMonstroProjectiles.length - 1; k >= 0; k--) {
             const pm = mpMonstroProjectiles[k];
             
-            // Compara trajetória do tiro do mago com a esfera da bolinha do monstro
             if (lineCircleIntersectionLocal(p.prevX, p.prevY, p.x, p.y, pm.x, pm.y, pm.radius + p.radius)) {
                 
-                // Gera a fagulha visual local de colisão
                 if (typeof window.criarImpacto === 'function') {
                     window.criarImpacto((p.x + pm.x) / 2, (p.y + pm.y) / 2, p.color || 'cyan', 1.0);
                 }
 
-                // Remove o tiro do monstro
                 mpMonstroProjectiles.splice(k, 1);
                 
-                // Desconta poder de perfuração do projétil do mago
                 const resistencia = pm.hitsToDestroy || 3;
                 p.penetration = (p.penetration || 1) - resistencia;
                 if (p.penetration <= 0) {
@@ -897,4 +883,8 @@ window.HitSystem.checkProjectileVsTarget = function(proj, target) {
         sendMessage('monster-damaged', { id: target.id, damage: calculatedDamage });
     }
     return originalCheckProjectileVsTarget(proj, target);
+};
+
+window.clearMpMonstroProjectiles = function() {
+    mpMonstroProjectiles.length = 0;
 };

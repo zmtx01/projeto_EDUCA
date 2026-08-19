@@ -244,8 +244,7 @@ function calcularCamera() {
 }
 
 function drawCenario() {
-    // CORREÇÃO: Evita que o jogo trave por completo se o arquivo de cenário falhar no carregamento
-    if (!cenarioImg.complete || cenarioImg.naturalWidth === 0) return;
+    if (!cenarioImg.complete) return;
     const cw = window.canvas.width;
     const ch = window.canvas.height;
     const viewWidth = cw / window.scale;
@@ -253,6 +252,7 @@ function drawCenario() {
     window.ctx.clearRect(0, 0, cw, ch);
     window.ctx.drawImage(cenarioImg, window.offsetX, window.offsetY, viewWidth, viewHeight, 0, 0, cw, ch);
 }
+
 // Raios Ambientais
 function spawnRaio() {
     const cw = window.canvas.width; const ch = window.canvas.height;
@@ -413,8 +413,13 @@ function gameLoop(time = 0) {
     if (typeof drawMonstros === 'function') drawMonstros(); 
     if (typeof drawImpactos === 'function') drawImpactos(deltaTime);
     if (typeof drawParticles === 'function') drawParticles();
-    //if (typeof drawMonstroCounter === 'function') drawMonstroCounter();
-    // exibição do contador de monstros restantes na tela
+    
+    // Mantém o antigo comentado como backup
+    // if (typeof drawMonstroCounter === 'function') drawMonstroCounter();
+    
+    // Ativa o novo contador simplificado
+    if (typeof drawWaveCounter === 'function') drawWaveCounter();
+    
     drawHUD();
     drawRaios();
 
@@ -439,6 +444,12 @@ window.cenarioOriginalHeight = cenarioOriginalHeight;
 window.resetPlayerStats = function() {
     if (!window.player) return;
     const player = window.player;
+    
+    // --- NOVO: Cancela qualquer temporizador ativo de ondas offline ---
+    if (window.hordeTimeoutId) {
+        clearTimeout(window.hordeTimeoutId);
+        window.hordeTimeoutId = null;
+    }
     
     player.level = 1;
     player.xp = 0;
@@ -469,8 +480,17 @@ window.resetPlayerStats = function() {
     if (window.particles) window.particles.length = 0;
     
     // Limpa em definitivo os projéteis locais dos monstros de ambas as telas (offline e online)
-    if (window.monstroProjectiles) window.monstroProjectiles.length = 0;
-    if (window.mpMonstroProjectiles) window.mpMonstroProjectiles.length = 0;
+    if (typeof window.clearMonstroProjectiles === 'function') {
+        window.clearMonstroProjectiles();
+    } else if (window.monstroProjectiles) {
+        window.monstroProjectiles.length = 0;
+    }
+
+    if (typeof window.clearMpMonstroProjectiles === 'function') {
+        window.clearMpMonstroProjectiles();
+    } else if (window.mpMonstroProjectiles) {
+        window.mpMonstroProjectiles.length = 0;
+    }
     
     // Reseta variáveis globais de controle de interface e hordas
     window.ordaAtual = 1;
