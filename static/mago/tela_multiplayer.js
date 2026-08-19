@@ -27,7 +27,12 @@ p2StaffImage.onload = () => {
   p2StaffHeight = p2StaffImage.height * p2StaffScale;
 };
 
-const SERVER_URL = `ws://${window.location.hostname}:3000`;
+const protocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
+const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+
+const SERVER_URL = isLocal 
+    ? `${protocol}${window.location.hostname}:3000` 
+    : `https://projeto-educa-zmtx.onrender.com/mago`; // <--- Coloque aqui a URL que você vai criar no Passo B
 window.socket = null;
 
 window.multiplayer = {
