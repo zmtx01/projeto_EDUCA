@@ -1,3 +1,96 @@
+
+<script>
+// ====================================================================================
+//            MAPA DE COMUNICAÇÃO E FLUXO DE DADOS — PROJETO SEMAE (PI2)
+//  Este bloco serve como guia de referência técnica para a futura migração de dados,
+//  integração com o site oficial e criação de novas validações (como e-mail/ID externo).
+// ====================================================================================
+
+// ------------------------------------------------------------------------------------
+// 1. FLUXO DE AUTENTICAÇÃO E IDENTIFICAÇÃO DO JOGADOR (SESSÃO)
+// ------------------------------------------------------------------------------------
+//
+// • [index.html] -> Porta de entrada local e online.
+//   - Ação: O jogador digita o nome no campo `#username` e clica em ENTRAR.
+//   - Local Storage: Grava a chave 'nomeEstagiario' (string) para uso de interface local.
+//   - Sessão no Servidor ( app.py ): O login real do site já está gravado no cookie
+//     criptografado 'jwt_token' (JWT). O jogo lê esse token invisivelmente para saber
+//     quem está jogando, garantindo que usuários com o mesmo nome em PCs diferentes
+//     não misturem ou subscrevam seus dados no banco de dados.
+//
+// ------------------------------------------------------------------------------------
+// 2. SISTEMA DE SALVAMENTO LOCAL E CONQUISTAS (PERSISTÊNCIA ESTÉTICA)
+// ------------------------------------------------------------------------------------
+//
+// • [mesa.html] & [dia_1.html] -> Verificação e ativação do troféu.
+//   - Chave Local: [NOME_DO_USUARIO]_conquistaAranha = 'true' (gravado no localStorage).
+//   - Comportamento: Se essa chave estiver ativa para o usuário logado, o código altera
+//     dinamicamente o caminho da imagem de fundo para 'mesa2.png' (mesa com a aranha).
+//   - Isolamento de Perfis: Usar o nome do usuário como prefixo impede que dois jogadores
+//     na mesma máquina e navegador tenham acesso à mesa modificada um do outro.
+//
+// ------------------------------------------------------------------------------------
+// 3. GATILHO DE ENTRADA — ACORDAR SERVIDOR (WAKE-UP PING)
+// ------------------------------------------------------------------------------------
+//
+// • [dia_1.html] -> Disparado na função iniciarTerminalDia1() (Fase 0).
+//   - Ação: Um fetch() em segundo plano envia uma requisição silenciosa de leitura.
+//   - Rota de Destino: GET para '/api/server-status'
+//   - Objetivo: Forçar o servidor gratuito do Render a iniciar o processo de "despertar"
+//     (que leva de 30 a 50 segundos) enquanto o jogador ainda está nas primeiras fases
+//     do terminal, eliminando qualquer sensação de travamento ou lentidão no final do dia.
+//
+// ------------------------------------------------------------------------------------
+// 4. GATILHO DE CONCLUSÃO — SALVAMENTO NA NUVEM (ENVIO DE DADOS)
+// ------------------------------------------------------------------------------------
+//
+// • [dia_1.html] -> Disparado no evento keypress da Fase 11 (Sucesso do Dia 1).
+//   - Ação: Dispara uma chamada assíncrona fetch() em segundo plano.
+//   - Rota de Destino: POST para '/api/save-score'
+//   - Variável de Verificação Local: 'errosTotaisNoDia' (soma de todas as falhas na digitação).
+//   - Payload de Envio (JSON):
+//     {
+//       "estrelas": 2,               // Integer. Indica o nível (Dia 1 concluído = 2 estrelas)
+//       "conquista_aranha": boolean  // True se errosTotaisNoDia === 0 (Perfect Run), senão False
+//     }
+//   - Processamento no app.py (PostgreSQL):
+//     O servidor decodifica o 'jwt_token' para obter o 'user_id' e o 'username'.
+//     Roda o comando SQL "ON CONFLICT (user_id) DO UPDATE" (UPSERT).
+//     - Se o usuário não tiver registro no ranking, cria uma linha limpa.
+//     - Se o usuário já tiver registro, atualiza as colunas mantendo apenas a melhor nota
+//       e define o carimbo de data 'updated_at' com a hora atual (CURRENT_TIMESTAMP).
+//
+// ------------------------------------------------------------------------------------
+// 5. ATUALIZAÇÃO DO QUADRO DE LÍDERES (REQUISIÇÃO E RENDERIZAÇÃO)
+// ------------------------------------------------------------------------------------
+//
+// • [ranking.html] -> Disparado na abertura da página (window.onload).
+//   - Ação: Dispara um fetch() de leitura.
+//   - Rota de Destino: GET para '/api/get-ranking' (exige cookie jwt_token ativo)
+//   - Dados Recebidos (JSON Array ordenado por Estrelas DESC, Aranha DESC e Data DESC):
+//     [
+//       {
+//         "id": 1,                      // ID do registro no banco
+//         "username": "LUCAS",          // Nome do estagiário
+//         "estrelas": 2,                // Quantidade de estrelas obtidas (1 a 5)
+//         "conquista_aranha": true      // Se possui o título Aranha desbloqueado (boolean)
+//       }
+//     ]
+//   - Renderização Dinâmica (Mapeamento de Cargos e Estrelas):
+//     - 1 Estrela = Aprendiz (Estrela: ★, Crachá: .cargo-aprendiz)
+//     - 2 Estrelas = Estagiário (Estrela: ★★, Crachá: .cargo-estagiario)
+//     - 3 Estrelas = Júnior (Estrela: ★★★, Crachá: .cargo-junior)
+//     - 4 Estrelas = Pleno (Estrela: ★★★★, Crachá: .cargo-pleno)
+//     - 5 Estrelas = Sênior (Estrela: ★★★★★, Crachá: .cargo-senior)
+//     - Se 'conquista_aranha' for TRUE:
+//       Substitui uma estrela amarela por uma estrela branca extra no final (★)
+//       Adiciona o sufixo " Aranha" ao nome do Cargo (Ex: "Estagiário Aranha")
+//       Aplica a classe CSS especial '.cargo-aranha' (borda e brilho vermelho neon).
+//
+// ====================================================================================
+</script>
+
+
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -409,97 +502,7 @@
     </script>
 
 
-
 </body>
 
 
 </html>
-
-// ====================================================================================
-//            MAPA DE COMUNICAÇÃO E FLUXO DE DADOS — PROJETO SEMAE (PI2)
-//  Este bloco serve como guia de referência técnica para a futura migração de dados,
-//  integração com o site oficial e criação de novas validações (como e-mail/ID externo).
-// ====================================================================================
-
-// ------------------------------------------------------------------------------------
-// 1. FLUXO DE AUTENTICAÇÃO E IDENTIFICAÇÃO DO JOGADOR (SESSÃO)
-// ------------------------------------------------------------------------------------
-//
-// • [index.html] -> Porta de entrada local e online.
-//   - Ação: O jogador digita o nome no campo `#username` e clica em ENTRAR.
-//   - Local Storage: Grava a chave 'nomeEstagiario' (string) para uso de interface local.
-//   - Sessão no Servidor ( app.py ): O login real do site já está gravado no cookie
-//     criptografado 'jwt_token' (JWT). O jogo lê esse token invisivelmente para saber
-//     quem está jogando, garantindo que usuários com o mesmo nome em PCs diferentes
-//     não misturem ou subscrevam seus dados no banco de dados.
-//
-// ------------------------------------------------------------------------------------
-// 2. SISTEMA DE SALVAMENTO LOCAL E CONQUISTAS (PERSISTÊNCIA ESTÉTICA)
-// ------------------------------------------------------------------------------------
-//
-// • [mesa.html] & [dia_1.html] -> Verificação e ativação do troféu.
-//   - Chave Local: [NOME_DO_USUARIO]_conquistaAranha = 'true' (gravado no localStorage).
-//   - Comportamento: Se essa chave estiver ativa para o usuário logado, o código altera
-//     dinamicamente o caminho da imagem de fundo para 'mesa2.png' (mesa com a aranha).
-//   - Isolamento de Perfis: Usar o nome do usuário como prefixo impede que dois jogadores
-//     na mesma máquina e navegador tenham acesso à mesa modificada um do outro.
-//
-// ------------------------------------------------------------------------------------
-// 3. GATILHO DE ENTRADA — ACORDAR SERVIDOR (WAKE-UP PING)
-// ------------------------------------------------------------------------------------
-//
-// • [dia_1.html] -> Disparado na função iniciarTerminalDia1() (Fase 0).
-//   - Ação: Um fetch() em segundo plano envia uma requisição silenciosa de leitura.
-//   - Rota de Destino: GET para '/api/server-status'
-//   - Objetivo: Forçar o servidor gratuito do Render a iniciar o processo de "despertar"
-//     (que leva de 30 a 50 segundos) enquanto o jogador ainda está nas primeiras fases
-//     do terminal, eliminando qualquer sensação de travamento ou lentidão no final do dia.
-//
-// ------------------------------------------------------------------------------------
-// 4. GATILHO DE CONCLUSÃO — SALVAMENTO NA NUVEM (ENVIO DE DADOS)
-// ------------------------------------------------------------------------------------
-//
-// • [dia_1.html] -> Disparado no evento keypress da Fase 11 (Sucesso do Dia 1).
-//   - Ação: Dispara uma chamada assíncrona fetch() em segundo plano.
-//   - Rota de Destino: POST para '/api/save-score'
-//   - Variável de Verificação Local: 'errosTotaisNoDia' (soma de todas as falhas na digitação).
-//   - Payload de Envio (JSON):
-//     {
-//       "estrelas": 2,               // Integer. Indica o nível (Dia 1 concluído = 2 estrelas)
-//       "conquista_aranha": boolean  // True se errosTotaisNoDia === 0 (Perfect Run), senão False
-//     }
-//   - Processamento no app.py (PostgreSQL):
-//     O servidor decodifica o 'jwt_token' para obter o 'user_id' e o 'username'.
-//     Roda o comando SQL "ON CONFLICT (user_id) DO UPDATE" (UPSERT).
-//     - Se o usuário não tiver registro no ranking, cria uma linha limpa.
-//     - Se o usuário já tiver registro, atualiza as colunas mantendo apenas a melhor nota
-//       e define o carimbo de data 'updated_at' com a hora atual (CURRENT_TIMESTAMP).
-//
-// ------------------------------------------------------------------------------------
-// 5. ATUALIZAÇÃO DO QUADRO DE LÍDERES (REQUISIÇÃO E RENDERIZAÇÃO)
-// ------------------------------------------------------------------------------------
-//
-// • [ranking.html] -> Disparado na abertura da página (window.onload).
-//   - Ação: Dispara um fetch() de leitura.
-//   - Rota de Destino: GET para '/api/get-ranking' (exige cookie jwt_token ativo)
-//   - Dados Recebidos (JSON Array ordenado por Estrelas DESC, Aranha DESC e Data DESC):
-//     [
-//       {
-//         "id": 1,                      // ID do registro no banco
-//         "username": "LUCAS",          // Nome do estagiário
-//         "estrelas": 2,                // Quantidade de estrelas obtidas (1 a 5)
-//         "conquista_aranha": true      // Se possui o título Aranha desbloqueado (boolean)
-//       }
-//     ]
-//   - Renderização Dinâmica (Mapeamento de Cargos e Estrelas):
-//     - 1 Estrela = Aprendiz (Estrela: ★, Crachá: .cargo-aprendiz)
-//     - 2 Estrelas = Estagiário (Estrela: ★★, Crachá: .cargo-estagiario)
-//     - 3 Estrelas = Júnior (Estrela: ★★★, Crachá: .cargo-junior)
-//     - 4 Estrelas = Pleno (Estrela: ★★★★, Crachá: .cargo-pleno)
-//     - 5 Estrelas = Sênior (Estrela: ★★★★★, Crachá: .cargo-senior)
-//     - Se 'conquista_aranha' for TRUE:
-//       Substitui uma estrela amarela por uma estrela branca extra no final (★)
-//       Adiciona o sufixo " Aranha" ao nome do Cargo (Ex: "Estagiário Aranha")
-//       Aplica a classe CSS especial '.cargo-aranha' (borda e brilho vermelho neon).
-//
-// ====================================================================================

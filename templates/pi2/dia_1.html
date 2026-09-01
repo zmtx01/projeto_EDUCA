@@ -547,11 +547,24 @@
 
     <script>
         
-        const nomeEstagiarioCheck = (localStorage.getItem('nomeEstagiario') || 'Estagiário').toUpperCase();
-        if (localStorage.getItem(nomeEstagiarioCheck + '_conquistaAranha') === 'true') {
-            const imgMesa = document.getElementById('imagem-mesa');
-            if (imgMesa) {
-                imgMesa.src = 'mesa2.png';
+        const imgMesa = document.getElementById('imagem-mesa');
+        if (imgMesa) {
+            let baseCaminho = '';
+            if (window.location.protocol === 'file:') {
+                if (window.location.pathname.includes('/templates/pi2/')) {
+                    baseCaminho = '../../static/pi2/';
+                } else {
+                    baseCaminho = '';
+                }
+            } else {
+                baseCaminho = '/static/pi2/';
+            }
+            
+            const nomeEstagiarioCheck = (localStorage.getItem('nomeEstagiario') || 'Estagiário').toUpperCase();
+            if (localStorage.getItem(nomeEstagiarioCheck + '_conquistaAranha') === 'true') {
+                imgMesa.src = baseCaminho + 'mesa2.png';
+            } else {
+                imgMesa.src = baseCaminho + 'mesa.png';
             }
         }
 

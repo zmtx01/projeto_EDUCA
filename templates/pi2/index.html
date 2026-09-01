@@ -413,7 +413,16 @@
             // Define o caminho correto da imagem dependendo de onde o jogo está rodando
             const imgSala = document.getElementById('imagem-transicao');
             if (imgSala) {
-                const baseCaminho = window.location.protocol === 'file:' ? '' : '/static/pi2/';
+                let baseCaminho = '';
+                if (window.location.protocol === 'file:') {
+                    if (window.location.pathname.includes('/templates/pi2/')) {
+                        baseCaminho = '../../static/pi2/';
+                    } else {
+                        baseCaminho = '';
+                    }
+                } else {
+                    baseCaminho = '/static/pi2/';
+                }
                 imgSala.src = baseCaminho + 'sala.png';
             }
             

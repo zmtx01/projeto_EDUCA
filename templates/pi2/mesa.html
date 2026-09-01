@@ -1333,11 +1333,17 @@
         }
 
         function abrirRanking() {
-            fecharTudo();
+            // SISTEMA HÍBRIDO ATUALIZADO (SEM PISCADA):
             if (window.location.protocol === 'file:') {
-                window.open('ranking.html', '_blank');
+                // Removemos o fecharTudo() daqui para que o terminal fique na tela até a troca de página, eliminando a piscada da mesa
+                window.location.href = 'ranking.html';
             } else {
-                document.getElementById('ranking-backdrop').style.display = 'flex';
+                // Se estiver rodando em um servidor, fechamos as telas normalmente antes de abrir o modal integrado
+                fecharTudo();
+                const rankingBackdrop = document.getElementById('ranking-backdrop');
+                if (rankingBackdrop) {
+                    rankingBackdrop.style.display = 'flex';
+                }
             }
         }
         function fecharRanking() {
