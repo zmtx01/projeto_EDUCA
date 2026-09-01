@@ -593,13 +593,19 @@
         function fecharTudo() { fecharTela(); fecharManual(); fecharArquivos(); fecharChamados(); fecharRanking(); }
 
         function abrirRanking() {
-            // SISTEMA HÍBRIDO ATUALIZADO (SEM PISCADA):
+            // SISTEMA HÍBRIDO ATUALIZADO (SEM PISCADA E SEM ERROS 404):
             if (window.location.protocol === 'file:') {
-                // Removemos o fecharTudo() daqui para que o terminal fique na tela até a troca de página, eliminando a piscada da mesa
+                // Se rodar localmente por dois cliques, navega para o ranking na mesma aba
                 window.location.href = 'ranking.html';
             } else {
-                // Se estiver rodando em um servidor, fechamos as telas normalmente antes de abrir o modal integrado
                 fecharTudo();
+                
+                // DEFINE O LINK DO IFRAME DINAMICAMENTE PARA A ROTA DO SERVIDOR (SEM .HTML)
+                const iframe = document.querySelector('.ranking-iframe-janela');
+                if (iframe) {
+                    iframe.src = '/pi2/ranking';
+                }
+
                 const rankingBackdrop = document.getElementById('ranking-backdrop');
                 if (rankingBackdrop) {
                     rankingBackdrop.style.display = 'flex';
@@ -1092,7 +1098,8 @@
         <div style="position: relative; display: flex; flex-direction: column; align-items: center;" onclick="event.stopPropagation()">
             <!-- Este botão é controlado diretamente pelo jogo pai, burlado 100% dos bloqueios de segurança -->
             <button onclick="fecharRanking()" style="position: absolute; top: -45px; right: 0; background: #121f27; border: 2px solid var(--cor-texto); color: var(--cor-texto); font-family: 'Consolas', monospace; font-weight: bold; font-size: 1rem; padding: 6px 16px; cursor: pointer; border-radius: 4px; transition: 0.15s; outline: none;">FECHAR [X]</button>
-            <iframe src="ranking.html" class="ranking-iframe-janela"></iframe>
+            <iframe class="ranking-iframe-janela"></iframe>
+
         </div>
     </div>
 
