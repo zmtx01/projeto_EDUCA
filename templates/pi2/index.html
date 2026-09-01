@@ -217,7 +217,7 @@
 
     <!-- Nova Tela 3 para carregar a imagem do escritório -->
     <div id="screen-3">
-        <img src="sala.png" alt="Sala do Escritório" class="imagem-centralizada" />
+        <img id="imagem-transicao" alt="Sala do Escritório" class="imagem-centralizada" />
     </div>
 
     <script>
@@ -389,14 +389,13 @@
                 document.removeEventListener('keydown', avancar);
                 document.removeEventListener('click', avancar);
                 
-                // Exibe a imagem de transição
                 carregarTela3(); 
 
-                // REDIRECIONAMENTO HÍBRIDO INTELIGENTE:
+                // REDIRECIONAMENTO HÍBRIDO INTELIGENTE
                 if (window.location.protocol === 'file:') {
-                    window.location.href = "mesa.html"; // Localmente abre o arquivo mesa.html (tudo minúsculo)
+                    window.location.href = "mesa.html"; // Localmente abre o mesa.html
                 } else {
-                    window.location.href = "/pi2"; // No servidor Render abre a rota /pi2
+                    window.location.href = "/pi2/mesa"; // No servidor abre a rota segura /pi2/mesa
                 }
             }
 
@@ -409,10 +408,15 @@
 
         // Função de transição para a Tela 3
         function carregarTela3() {
-            // Esconde a caixa do terminal
             document.getElementById('terminal').style.display = 'none';
             
-            // Exibe a tela 3 com display flex para alinhar a imagem no centro exato
+            // Define o caminho correto da imagem dependendo de onde o jogo está rodando
+            const imgSala = document.getElementById('imagem-transicao');
+            if (imgSala) {
+                const baseCaminho = window.location.protocol === 'file:' ? '' : '/static/pi2/';
+                imgSala.src = baseCaminho + 'sala.png';
+            }
+            
             const screen3 = document.getElementById('screen-3');
             screen3.style.display = 'flex';
         }
