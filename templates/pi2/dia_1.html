@@ -1,0 +1,1083 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Diário de um Estagiário - Dia 1</title>
+    <style>
+        /* Paleta de cores baseada nas especificações técnicas do SEMAE */
+        :root {
+            --cor-fundo: #000000;      
+            --cor-texto: #5FDCF2;      
+            --cor-destaque: #FF9F1C;   
+            --cor-sucesso: #45CF8A;    
+            
+            --cor-fundo-navegador: #0d161b;
+            --cor-fundo-painel: #050a0d;
+            --cor-borda: #1e3540;
+            --cor-barra-topo: #121f27;
+            
+            --cor-fundo-cmd: #000000;
+            --cor-texto-padrao-cmd: #cccccc;
+            --cor-barra-titulo-cmd: #181818;
+            --cor-borda-janela-cmd: #2d2d2d;
+        }
+
+        body {
+            /* TEM QUE SER IGUAL A MESA */
+            background-color: #000000;
+            color: #5FDCF2;
+            font-family: 'Consolas', 'SF Mono', 'DejaVu Sans Mono', monospace;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            padding: 20px;
+            box-sizing: border-box;
+            position: relative;
+            overflow: hidden;
+            user-select: none;
+        }
+
+        /* O SEGREDO DO TÍTULO: Tirar ele do cálculo de espaço */
+        .dia-titulo {
+            position: absolute;
+            top: 50px; /* Fica fixo lá no topo da tela */
+            left: 0;
+            width: 100%;
+            font-size: 3.5rem;
+            font-weight: bold;
+            color: #5FDCF2; 
+            text-align: center;
+            margin: 0;
+            pointer-events: none;
+        }
+
+        .sala-container {
+            position: relative;
+            display: inline-block; 
+            max-width: 100%;
+            top: 0; /* REMOVA O top: -130px DAQUI! */
+        }
+
+        .instrucao-texto {
+            position: absolute;
+            bottom: -60px; /* Ajustado para bater exatamente com o Dia 1 */
+            left: 0;
+            width: 100%;
+            text-align: center;
+            font-size: 1.2rem;
+            line-height: 1.5; /* Mantém a altura da linha idêntica */
+            margin: 0; /* Remove margens invisíveis do navegador */
+            padding: 0;
+            color: var(--cor-texto);
+            pointer-events: none; /* Impede que o texto atrapalhe cliques na imagem */
+        }
+
+        .imagem-centralizada {
+            display: block;
+            max-width: 50vw;
+            max-height: 50vh;
+            object-fit: contain;
+            border: 2px solid var(--cor-texto);
+            border-radius: 4px;
+        }
+
+        .hitbox { position: absolute; cursor: pointer; box-sizing: border-box; z-index: 410; }
+        #hitbox-tela { top: 5%; left: 25%; width: 35%; height: 45%; }
+        #hitbox-arquivos { top: 74%; left: 60%; width: 25%; height: 25%; }
+        #hitbox-manual { top: 18%; left: 70%; width: 26%; height: 36%; }
+        #hitbox-chamados { top: 55%; left: 8%; width: 15%; height: 30%; }
+
+        /* JANELA FLUTUANTE DE ARQUIVOS */
+        .arquivos-backdrop {
+            display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background-color: rgba(0, 0, 0, 0.7); z-index: 600; justify-content: center; align-items: center;
+        }
+
+        .terminal-box {
+            width: 100%; max-width: 520px; background-color: #051520; border: 2px solid var(--cor-texto);
+            border-radius: 8px; padding: 35px 30px; box-shadow: 0 0 25px rgba(95, 220, 242, 0.15); box-sizing: border-box; text-align: center;
+        }
+        .titulo-alerta { color: var(--cor-destaque); font-size: 1.5rem; font-weight: bold; letter-spacing: 1px; margin-bottom: 20px; }
+        .mensagem-alerta { font-size: 1.1rem; line-height: 1.6; }
+
+        /* ESTILOS DO CADERNO MANUAL */
+        .manual-backdrop { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background-color: rgba(0, 0, 0, 0.4); z-index: 400; }
+        .manual-wrapper-posicao { display: none; position: absolute; right: 4%; top: 15%; z-index: 450; pointer-events: none; }
+        .caderno-moldura {
+            width: 840px; height: 1060px; background-color: #f6ebd0; border-radius: 4px; box-sizing: border-box;
+            position: relative; border-left: 14px solid #2e1d11; color: #1a1a1a;
+            box-shadow: 1px 1px 0px #d8ccb2, 2px 2px 0px #ffffff, 3px 3px 0px #d8ccb2, 4px 4px 0px #ffffff, 5px 5px 0px #d8ccb2, 6px 6px 18px rgba(0,0,0,0.6);
+            perspective: 1200px; pointer-events: auto; 
+        }
+        .pagina {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; padding: 40px 45px 40px 65px; box-sizing: border-box; background-color: #f6ebd0;
+            overflow-y: auto; scrollbar-width: none; -ms-overflow-style: none; background-attachment: local;
+            background-image: linear-gradient(rgba(0,0,0,0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(255,0,0,0.15) 1px, transparent 1px);
+            background-size: 100% 34px, 100% 100%; background-position: 0 10px, 45px 0; line-height: 34px; font-size: 1.15rem; display: none;
+            border-radius: 4px; transform-origin: left center; clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%); transition: clip-path 0.25s ease-in-out, transform 0.6s ease-in-out, opacity 0.6s ease;
+        }
+        .pagina::-webkit-scrollbar { display: none; }
+        .pagina.ativa { display: block; z-index: 3; }
+        .pagina.atras { display: block; z-index: 1; }
+        .pagina::after {
+            content: ''; position: absolute; top: 0; right: 0; width: 0; height: 0;
+            background: linear-gradient(135deg, transparent 50%, rgba(0,0,0,0.15) 50%, rgba(0,0,0,0.1) 55%, #f6ebd0 55%, #e1d3b0 100%);
+            box-shadow: -3px 3px 6px rgba(0,0,0,0.15); transition: width 0.25s ease-in-out, height 0.25s ease-in-out; border-bottom-left-radius: 4px; pointer-events: none;
+        }
+        .pagina.dobrando { clip-path: polygon(0 0, calc(100% - 90px) 0, 100% 90px, 100% 100%, 0 100%); }
+        .pagina.dobrando::after { width: 90px; height: 90px; }
+        .pagina.saindo { display: block; z-index: 4; opacity: 0; transform: rotateY(-110deg); clip-path: polygon(0 0, calc(100% - 90px) 0, 100% 90px, 100% 100%, 0 100%); }
+        .pagina.voltando { display: block !important; z-index: 5; opacity: 0; transform: rotateY(-110deg); transition: none !important; }
+        
+        
+        .quadro-azul {
+            border: 3px solid #1a4cd6;
+            padding: 15px 25px;
+            text-align: center;
+            color: #1a4cd6;
+            font-weight: bold;
+            margin: 20px auto;
+            border-radius: 4px;
+            width: 85%;
+            background-color: rgba(26, 76, 214, 0.05);
+            box-sizing: border-box;
+            line-height: 1.5;
+            box-shadow: 4px 4px 0px rgba(26, 76, 214, 0.15);
+        }
+        
+        .titulo-pagina { font-weight: bold; font-size: 1.5rem; margin-bottom: 15px; color: #2e1d11; text-transform: uppercase; border-bottom: 2px solid #2e1d11; padding-bottom: 5px; }
+        .subtitulo-pagina { font-weight: bold; font-size: 1.3rem; margin: 15px 0 10px 0; color: #2e1d11; text-transform: uppercase; }
+        .regra-destaque { font-family: "Segoe Print", "Ink Free", "Noteworthy", "Chalkboard SE", "Comic Sans MS", cursive; font-weight: bold; color: #b30000; font-size: 1.2rem; display: inline-block; }
+        
+        .carimbo-python { border: 2px dashed #b30000; color: #b30000; font-family: 'Consolas', monospace; font-size: 0.8rem; font-weight: bold; text-transform: uppercase; padding: 2px 6px; display: inline-block; transform: rotate(-3deg); margin-bottom: 12px; letter-spacing: 1px; border-radius: 3px; }
+        
+        .nota-manuscrita{color:#6b3d20;font-family:"Segoe Print",cursive;font-size:1rem;line-height:30px;margin-top:10px}
+
+        /* MODAL CHAMADOS */
+        .chamados-backdrop { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background-color: rgba(0, 0, 0, 0.75); z-index: 500; justify-content: center; align-items: center; }
+        .navegador-container { width: 95%; max-width: 1200px; border: 2px solid var(--cor-borda); border-radius: 8px; background-color: var(--cor-fundo-navegador); box-shadow: 0 10px 35px rgba(0, 0, 0, 0.9); overflow: hidden; display: flex; flex-direction: column; }
+        .navegador-topo { background-color: var(--cor-barra-topo); padding: 12px 18px; display: flex; align-items: center; gap: 12px; border-bottom: 2px solid var(--cor-borda); }
+        .botoes-janela { display: flex; gap: 6px; }
+        .botao-janela-circulo { width: 12px; height: 12px; border-radius: 50%; background-color: var(--cor-borda); }
+        .barra-endereco { flex-grow: 1; background-color: #050a0d; border: 1px solid var(--cor-borda); border-radius: 4px; padding: 5px 12px; font-size: 0.85rem; color: #a0b2be; display: flex; align-items: center; gap: 5px; }
+        .protocolo-seguro { color: var(--cor-sucesso); font-weight: bold; }
+        .botao-fechar-x { font-family: inherit; font-weight: bold; font-size: 1.3rem; color: var(--cor-destaque); cursor: pointer; padding: 0 5px 0 15px; user-select: none; transition: color 0.15s; }
+        .botao-fechar-x:hover { color: #ff5f56; }
+        
+        .conteudo-web { display: flex; height: 800px; background-color: var(--cor-fundo-painel); }
+        .sidebar-chamados { width: 320px; border-right: 2px solid var(--cor-borda); background-color: #060e12; display: flex; flex-direction: column; }
+        .sidebar-titulo { padding: 18px; font-size: 0.95rem; border-bottom: 1px solid var(--cor-borda); font-weight: bold; color: var(--cor-destaque); text-transform: uppercase; letter-spacing: 1px; }
+        
+        /* ESTILO DO ITEM CHAMADO (EXATAMENTE COMO SOLICITADO) */
+        .item-chamado{padding:15px;border-bottom:1px solid var(--cor-borda);cursor:pointer;background:#10212b;border-left:3px solid var(--cor-destaque)}
+        .item-status{font-size:.75rem;font-weight:bold;text-transform:uppercase;padding:2px 6px;border-radius:3px;background:rgba(255,159,28,.15);color:var(--cor-destaque);border:1px solid var(--cor-destaque)}
+        .item-codigo{font-weight:bold;font-size:.9rem;margin:5px 0 3px;color:#fff}
+        .item-assunto{font-size:.8rem;color:#8da1ad}
+
+        .painel-principal { flex-grow: 1; padding: 40px; overflow-y: auto; display: flex; flex-direction: column; }
+        .cabecalho-chamado { border-bottom: 2px solid var(--cor-borda); padding-bottom: 15px; margin-bottom: 20px; }
+        .codigo-chamado { font-size: 1.4rem; color: var(--cor-destaque); font-weight: bold; margin-bottom: 5px; }
+        .assunto-chamado { font-size: 1.15rem; color: #fff; font-weight: bold; }
+        
+        .grid-metadados { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; background: #091216; border: 1px solid var(--cor-borda); padding: 15px; border-radius: 4px; margin-bottom: 25px; font-size: .9rem; }
+        .grid-metadados strong { color: #8da1ad; }
+        .secao-titulo { font-size: 1rem; color: var(--cor-destaque); border-bottom: 1px solid var(--cor-borda); padding-bottom: 5px; margin-bottom: 10px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; }
+        .texto-corpo { font-size: .95rem; line-height: 1.6; color: #cfdee7; margin-bottom: 25px; }
+        .bloco-encaminhamento { border-left: 4px solid var(--cor-destaque); background: rgba(255,159,28,.05); padding: 15px 20px; margin-bottom: 25px; line-height: 1.6; }
+        .btn-iniciar-atendimento { background: transparent; color: var(--cor-destaque); border: 2px solid var(--cor-destaque); padding: 12px 25px; font-weight: bold; font-size: 1rem; cursor: pointer; border-radius: 4px; align-self: flex-start; transition: 0.2s; }
+        .btn-iniciar-atendimento:hover { background: var(--cor-destaque); color: #000; }
+
+        /* TELA CMD */
+        .tela-backdrop { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background-color: rgba(0, 0, 0, 0.75); z-index: 460; justify-content: center; align-items: center; }
+        .cmd-janela { width: 95%; max-width: 1200px; background-color: var(--cor-fundo-cmd); border: 1px solid var(--cor-borda-janela-cmd); box-shadow: 0 15px 50px rgba(0, 0, 0, 0.9); border-radius: 8px; overflow: hidden; display: flex; flex-direction: column; pointer-events: auto; }
+        .cmd-titulo-barra { background-color: var(--cor-barra-titulo-cmd); padding: 12px 18px; display: flex; justify-content: space-between; align-items: center; font-size: 0.85rem; color: #a0a0a0; border-bottom: 1px solid #222222; }
+        .cmd-titulo-texto { display: flex; align-items: center; gap: 8px; }
+        .cmd-icone-simulado { width: 12px; height: 12px; background-color: var(--cor-texto); border-radius: 2px; }
+        .cmd-controles-janela { display: flex; gap: 15px; font-size: 0.9rem; cursor: pointer; }
+        .botao-fechar-cmd { transition: color 0.15s; } .botao-fechar-cmd:hover { color: #ff5f56; }
+        
+        .cmd-corpo { background-color: var(--cor-fundo-cmd); padding: 40px; height: 800px; box-sizing: border-box; position: relative; display: flex; flex-direction: column; justify-content: space-between; cursor: text; }
+        .cmd-corpo::before { content: " "; display: block; position: absolute; top: 0; left: 0; bottom: 0; right: 0; background: linear-gradient(rgba(0, 0, 0, 0) 50%, rgba(255, 255, 255, 0.012) 50%); background-size: 100% 3px; z-index: 10; pointer-events: none; }
+        
+        .historico-terminal { 
+            flex-grow: 1; 
+            overflow-y: auto; 
+            font-size: 1.25rem; 
+            line-height: 1.6; 
+            color: var(--cor-texto-padrao-cmd); 
+            white-space: pre-wrap; 
+            z-index: 20; 
+            padding-right: 10px; 
+            /* Regras para forçar a permissão de seleção de texto */
+            user-select: text !important;
+            -webkit-user-select: text !important;
+        }
+
+        /* Garante que tudo dentro do histórico também possa ser selecionado */
+        .historico-terminal * {
+            user-select: text !important;
+            -webkit-user-select: text !important;
+        }
+        .historico-terminal::-webkit-scrollbar { width: 10px; } .historico-terminal::-webkit-scrollbar-track { background: #000; } .historico-terminal::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; }
+        
+        .linha-input { display: flex; align-items: center; font-size: 1.25rem; color: var(--cor-texto-padrao-cmd); border-top: 1px solid #1a1a1a; padding-top: 20px; z-index: 20; margin-top: 10px; }
+        .prompt-simbolo { margin-right: 12px; font-weight: bold; }
+        
+        .input-wrapper { position: relative; flex-grow: 1; display: flex; align-items: center; }
+        .campo-entrada, #ghost-text { font-family: inherit; font-size: 1.25rem; margin: 0; padding: 0; border: none; width: 100%; letter-spacing: 0; background: transparent; }
+        .campo-entrada { position: relative; z-index: 2; color: #fff; outline: none; caret-color: #fff; }
+        #ghost-text { position: absolute; left: 0; top: 0; color: #444; pointer-events: none; white-space: pre; }
+
+        .transicao-verde { color: var(--cor-sucesso) !important; font-weight: bold; }
+        .interacao-amarela { color: var(--cor-destaque) !important; font-weight: bold; }
+        .cor-erro { color: #ff5f56 !important; font-weight: bold; }
+
+        @media (max-height: 1100px) { .manual-wrapper-posicao { transform: scale(0.8); transform-origin: top right; } }
+        @media (max-height: 920px) { .manual-wrapper-posicao { transform: scale(0.7); transform-origin: top right; } .cmd-janela, .navegador-container { transform: scale(0.85); transform-origin: center; } }
+        @media (max-height: 760px) { .manual-wrapper-posicao { transform: scale(0.55); transform-origin: top right; } .cmd-janela, .navegador-container { transform: scale(0.7); transform-origin: center; } }
+    
+        .ranking-backdrop { 
+            display: none; 
+            position: fixed; 
+            top: 0; 
+            left: 0; 
+            width: 100vw; 
+            height: 100vh; 
+            background-color: rgba(0, 0, 0, 0.75); 
+            z-index: 500; 
+            justify-content: center; 
+            align-items: center; 
+        }
+        .ranking-iframe-janela {
+            width: 95%;
+            max-width: 900px;
+            height: 650px;
+            border: none;
+            border-radius: 8px;
+            box-shadow: 0 10px 35px rgba(0, 0, 0, 0.9);
+            z-index: 510;
+        }
+    
+    
+    
+    </style>
+</head>
+<body>
+
+    <div class="sala-container">
+        <img id="imagem-mesa" src="mesa.png" alt="Mesa de Trabalho" class="imagem-centralizada" />
+        
+        <div id="hitbox-tela" class="hitbox" onclick="clicarTela()"></div>
+        <div id="hitbox-arquivos" class="hitbox" onclick="clicarArquivos()"></div>
+        <div id="hitbox-manual" class="hitbox" onclick="clicarManual()"></div>
+        <div id="hitbox-chamados" class="hitbox" onclick="clicarChamados()"></div>
+
+        <!-- A luz do telefone voltou para cá -->
+        <div id="luz-telefone"></div>
+
+        <!-- O texto preso na base da imagem -->
+        <div class="instrucao-texto">
+            Explore um pouco e veja o que encontra.
+        </div>
+    </div>
+
+    <!-- ARQUIVOS -->
+    <div class="arquivos-backdrop" id="arquivos-backdrop" onclick="fecharArquivos()">
+        <div class="terminal-box" onclick="event.stopPropagation()">
+            <div class="titulo-alerta">ACESSO RESTRITO</div>
+            <div class="mensagem-alerta">Você ainda não pode mexer nos arquivos.</div>
+        </div>
+    </div>
+
+    <!-- MANUAL DOS ESTAGIÁRIOS -->
+    <div class="manual-backdrop" id="manual-backdrop" onclick="fecharTudo()"></div>
+    <div class="manual-wrapper-posicao" id="manual-wrapper" onclick="focarManual()">
+        <div class="caderno-moldura" id="caderno" onclick="cliqueNoCaderno(event)">
+            
+            <!-- PÁGINA 0: Intro Dia 0 (Sempre liberada) -->
+            <div class="pagina ativa">
+                <div class="carimbo-python">SINTAXE OFICIAL: PYTHON 3</div>
+                <div class="titulo-pagina">MANUAL DOS ESTAGIÁRIOS</div>
+                Se você está lendo isso, provavelmente acabou de entrar no TI.<br><br>
+                Primeira regra:<br>
+                <span class="regra-destaque">não entre em pânico.</span><br><br>
+                Segunda regra:<br>
+                <span class="regra-destaque">leia o chamado antes de mexer em qualquer coisa.</span><br><br>
+                Terceira regra:<br>
+                <span class="regra-destaque">se não souber o que fazer, procure primeiro.</span><br><br>
+                
+                <div class="nota-manuscrita">
+                    "Anotação: O terminal aceita letras maiúsculas e minúsculas com tolerância de espaço para facilitar, mas o interpretador Python real na internet é bem rígido!"
+                </div>
+                
+                <!-- Adicionei margin-top aqui para empurrar a caixa para baixo -->
+                <div class="quadro-azul" style="margin-top: 90px; color: #1a1a1a;">
+                    Novas páginas serão adicionadas conforme você avança pelos dias de treinamento.<br><br>
+                    
+                    <!-- O span isola apenas essas duas linhas para ficarem na cor azul -->
+                    <span style="color: #1a4cd6;">
+                        Canto direito: avançar para a próxima página →<br>
+                        ← Canto esquerdo: voltar para a página anterior
+                    </span><br><br>
+                    
+                    Consulte o manual sempre que precisar.
+                </div>
+                
+            </div>
+            
+            <!-- PÁGINA 1: PRINT -->
+            <div class="pagina">
+                <div class="carimbo-python">AMBIENTE DE TREINAMENTO</div>
+                <div class="titulo-pagina">Página — PRINT</div>
+                Linguagem utilizada neste terminal:<br>
+                <span class="regra-destaque">PYTHON</span><br><br>
+                
+                O comando <span class="regra-destaque">print()</span> serve para mostrar uma informação na tela do computador.<br><br>
+                
+                Exemplo:<br>
+                print("Olá")<br><br>
+                
+                • <span class="regra-destaque">print</span> indica a ação de exibir;<br>
+                • O conteúdo do texto fica obrigatoriamente entre aspas.<br><br>
+                
+                <div class="carimbo-python" style="margin-top: 10px;">SINTAXE — PYTHON</div>
+                <div class="nota-manuscrita">
+                    "Anotação rápida: Textos para exibir sempre precisam de aspas duplas (\") ou simples (\'). Mas se for apenas números, pode colocar direto nos parênteses!"
+                </div>
+            </div>
+
+            <!-- PÁGINA 2: INPUT -->
+            <div class="pagina">
+                <div class="carimbo-python">SINTAXE — PYTHON</div>
+                <div class="titulo-pagina">Página — INPUT</div>
+                O comando <span class="regra-destaque">input()</span> permite que o sistema receba uma informação digitada diretamente pelo usuário.<br><br>
+                
+                Exemplo:<br>
+                input("Qual é o nome?")<br><br>
+                
+                O computador apresenta a pergunta e aguarda a digitação de uma resposta.<br><br>
+                
+                Também podemos evoluir o comando armazenando o dado diretamente em uma variável:<br>
+                usuario = input("Qual é o nome?")
+                <div class="nota-manuscrita">
+                    "Se o computador fala com o print(), ele escuta e recebe com o input()!"
+                </div>
+            </div>
+
+            <!-- PÁGINA 3: VARIÁVEIS -->
+            <div class="pagina">
+                <div class="carimbo-python">SINTAXE — PYTHON</div>
+                <div class="titulo-pagina">Página — VARIÁVEIS</div>
+                Uma <span class="regra-destaque">variável</span> funciona como uma identificação ou caixa usada pelo programa para salvar uma informação que usaremos depois.<br><br>
+                
+                Exemplo:<br>
+                usuario = "Rafael Mendes"<br><br>
+                
+                • <span class="regra-destaque">usuario</span> é o nome dado à variável;<br>
+                • O sinal <span class="regra-destaque">=</span> atribui/guarda a informação.<br><br>
+                
+                Para exibir o dado salvo:<br>
+                print(usuario)
+                <div class="nota-manuscrita">
+                    "O nome da variável fica à esquerda e o sinal '=' significa ATRIBUIR (guardar) a informação dentro dela."
+                </div>
+            </div>
+
+            <!-- PÁGINA 4: TRUE / FALSE (Estados) -->
+            <div class="pagina">
+                <div class="carimbo-python">SINTAXE — PYTHON</div>
+                <div class="titulo-pagina">Página — Estados</div>
+                Nem toda informação do sistema operacional é composta por textos longos ou números.<br><br>
+                
+                Algumas informações representam apenas duas possibilidades específicas:<br>
+                • Verdadeiro ou falso;<br>
+                • Ligado ou desligado;<br>
+                • Ativo ou inativo.<br><br>
+                
+                Para isso, usamos os booleanos:<br>
+                computador_ligado = True<br>
+                computador_ligado = False<br><br>
+                
+                • <span class="regra-destaque">True</span> representa verdadeiro;<br>
+                • <span class="regra-destaque">False</span> representa falso.<br><br>
+                
+                Atenção: Python diferencia maiúsculas de minúsculas. "True" e "False" devem iniciar com letras maiúsculas.
+                <div class="nota-manuscrita">
+                    "Atenção extrema: No Python, True e False começam sempre com letra MAIÚSCULA. Escrever minúsculo dará erro!"
+                </div>
+            </div>
+
+            <!-- PÁGINA 5: IF (Tomando decisões) -->
+            <div class="pagina">
+                <div class="carimbo-python">SINTAXE — PYTHON</div>
+                <div class="titulo-pagina">Página — Tomando decisões</div>
+                O comando <span class="regra-destaque">if</span> (significa "se") permite que o programa tome uma decisão e execute uma ação somente quando uma condição for verdadeira.<br><br>
+                
+                Exemplo:<br>
+                if computador_ligado:<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;print("ESTAÇÃO OPERACIONAL")<br><br>
+                
+                • <span class="regra-destaque">if</span>: comando "se";<br>
+                • <span class="regra-destaque">computador_ligado</span>: a condição avaliada;<br>
+                • <span class="regra-destaque">:</span> indica o início do bloco de código;<br>
+                • Recuo/Indentação de 4 espaços define que o comando pertence ao if.<br><br>
+                
+                <div style="border: 1px solid #1a1a1a; padding: 10px; border-radius: 4px; background-color: rgba(0,0,0,0.05);">
+                    <strong>ATENÇÃO:</strong><br>
+                    • <span class="regra-destaque">=</span> serve para atribuir/guardar um valor.<br>
+                    • <span class="regra-destaque">==</span> serve para comparar duas informações.
+                </div>
+                <div class="nota-manuscrita">
+                    "Lembrete de ouro: Nunca esqueça os dois-pontos (:) ao final do if e do else, e sempre recue (indente) o comando print logo abaixo deles!"
+                </div>
+            </div>
+
+            <!-- PÁGINA 6: ELSE (Caso contrário) -->
+            <div class="pagina">
+                <div class="carimbo-python">SINTAXE — PYTHON</div>
+                <div class="titulo-pagina">Página — Caso contrário</div>
+                O comando <span class="regra-destaque">else</span> (significa "caso contrário") define o caminho alternativo quando a condição do if não for verdadeira.<br><br>
+                
+                Estrutura Completa:<br>
+                if computador_ligado:<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;print("ESTAÇÃO OPERACIONAL")<br>
+                else:<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;print("VERIFICAR ESTAÇÃO")<br><br>
+                
+                Lógica de Fluxo:<br>
+                • <span class="regra-destaque">if</span> → condição verdadeira → executa primeiro bloco;<br>
+                • <span class="regra-destaque">else</span> → condição falsa → executa segundo bloco.<br><br>
+                
+                Nota técnica: O primeiro <span class="regra-destaque">:</span> inicia o bloco do if e o segundo <span class="regra-destaque">:</span> inicia o bloco alternativo do else. Os comandos subordinados precisam de indentação.
+            </div>
+
+        </div>
+    </div>
+
+    <!-- CHAMADOS NAVEGADOR -->
+    <div class="chamados-backdrop" id="chamados-backdrop" onclick="fecharChamados()">
+        <div class="navegador-container" onclick="event.stopPropagation()">
+            <div class="navegador-topo">
+                <div class="botoes-janela"><div class="botao-janela-circulo"></div><div class="botao-janela-circulo"></div><div class="botao-janela-circulo"></div></div>
+                <div class="barra-endereco"><span class="protocolo-seguro">HTTPS://</span> intranet.semae.gov.br/chamados</div>
+                <div class="botao-fechar-x" onclick="fecharChamados()">X</div>
+            </div>
+
+            <div class="conteudo-web">
+                <div class="sidebar-chamados">
+                    <div class="sidebar-titulo">Atendimentos</div>
+                    <div class="item-chamado">
+                        <span class="item-status" id="badge-sidebar">Pendente</span>
+                        <div class="item-codigo">SE-CTI-26-0001</div>
+                        <div class="item-assunto">Diagnóstico de estação</div>
+                    </div>
+                </div>
+
+                <div class="painel-principal">
+                    <div class="cabecalho-chamado">
+                        <div>
+                            <div class="codigo-chamado">SE-CTI-26-0001</div>
+                            <div class="assunto-chamado">Diagnóstico básico da estação de trabalho</div>
+                        </div>
+                    </div>
+
+                    <div class="grid-metadados">
+                        <div><strong>Número:</strong> <span style="color:#fff;">SE-CTI-26-0001</span></div>
+                        <div><strong>Solicitante:</strong> <span style="color:#fff;">Rafael Mendes</span></div>
+                        <div><strong>Setor:</strong> <span style="color:#fff;">Atendimento ao Usuário</span></div>
+                        <div><strong>Equipamento:</strong> <span style="color:#fff;">ATD-07</span></div>
+                        <div><strong>Prioridade:</strong> <span style="color:#fff;">Normal</span></div>
+                        <div><strong>Status:</strong> <span id="chamado-status" style="color:var(--cor-destaque); font-weight:bold;">Pendente</span></div>
+                    </div>
+
+                    <div class="secao-titulo">Histórico</div>
+                    <div class="texto-corpo">
+                        O usuário Rafael Mendes informou ao TI que a estação de trabalho ATD-07 apresentou um comportamento inesperado durante o expediente.<br><br>
+                        Segundo o usuário, o computador está ligado e conectado à rede, porém algumas informações não estão sendo apresentadas corretamente.
+                    </div>
+
+                    <div class="secao-titulo">Encaminhamento do Supervisor</div>
+                    <div class="bloco-encaminhamento">
+                        Marcos Almeida — Supervisor de TI<br><br>
+                        <span id="encaminhamento-nome-estagiario" style="text-transform:uppercase;">ESTAGIÁRIO</span>,<br><br>
+                        Este será seu primeiro atendimento.<br><br>
+                        Antes de tentar corrigir qualquer coisa, faça um diagnóstico básico da estação.<br>
+                        Comece pelo terminal.<br><br>
+                        — Marcos Almeida<br>Supervisor de TI
+                    </div>
+
+                    <button class="btn-iniciar-atendimento" id="btn-iniciar-jogo" onclick="iniciarTerminalDia1()">[ INICIAR ATENDIMENTO ]</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- TERMINAL CMD -->
+    <div class="tela-backdrop" id="tela-backdrop" onclick="fecharTudo()">
+        <div class="cmd-janela" onclick="event.stopPropagation(); focarTela();">
+            <div class="cmd-titulo-barra">
+                <div class="cmd-titulo-texto"><div class="cmd-icone-simulado"></div><span>Prompt de Comando - semae.exe [Estação: ATD-07]</span></div>
+                <div class="cmd-controles-janela"><span>—</span><span>❑</span><span class="botao-fechar-cmd" onclick="fecharTela()">✕</span></div>
+            </div>
+
+            <div class="cmd-corpo" id="terminal-foco">
+                <div class="historico-terminal" id="historico-linhas">
+                    <div>Microsoft Windows [versão 10.0.19045]
+(c) Microsoft Corporation. Todos os direitos reservados.
+
+=======================================================
+               TERMINAL OPERACIONAL SEMAE
+=======================================================</div>
+                    <div class="interacao-amarela" style="margin-top:40px;">Nenhum atendimento iniciado. Verifique seus chamados.</div>
+                </div>
+
+                <div class="linha-input" id="area-input">
+                    <span class="prompt-simbolo">C:\SEMAE\ATD-07&gt;</span>
+                    <div class="input-wrapper">
+                        <span id="ghost-text"></span>
+                        <input type="text" id="prompt-input" class="campo-entrada" autocomplete="off">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        
+        const nomeEstagiarioCheck = (localStorage.getItem('nomeEstagiario') || 'Estagiário').toUpperCase();
+        if (localStorage.getItem(nomeEstagiarioCheck + '_conquistaAranha') === 'true') {
+            const imgMesa = document.getElementById('imagem-mesa');
+            if (imgMesa) {
+                imgMesa.src = 'mesa2.png';
+            }
+        }
+
+
+        /* CONTROLES DE JANELA */
+        function clicarTela() {
+            fecharArquivos(); fecharChamados();
+            const telaBackdrop = document.getElementById('tela-backdrop');
+            const manualWrapper = document.getElementById('manual-wrapper');
+            
+            if (manualWrapper.style.display === 'block') {
+                telaBackdrop.style.backgroundColor = 'transparent';
+                telaBackdrop.style.pointerEvents = 'none'; 
+                focarTela(); 
+            } else {
+                telaBackdrop.style.backgroundColor = 'rgba(0, 0, 0, 0.75)';
+                telaBackdrop.style.pointerEvents = 'auto';
+                telaBackdrop.style.zIndex = '460'; 
+            }
+            telaBackdrop.style.display = 'flex';
+            setTimeout(() => document.getElementById('prompt-input').focus(), 50);
+        }
+        function fecharTela() { document.getElementById('tela-backdrop').style.display = 'none'; document.getElementById('tela-backdrop').style.backgroundColor = 'rgba(0, 0, 0, 0.75)'; document.getElementById('tela-backdrop').style.pointerEvents = 'auto'; }
+        function focarTela() { document.getElementById('tela-backdrop').style.zIndex = '480'; document.getElementById('manual-wrapper').style.zIndex = '450'; }
+        function focarManual() { document.getElementById('manual-wrapper').style.zIndex = '490'; document.getElementById('tela-backdrop').style.zIndex = '450'; }
+        function fecharTudo() { fecharTela(); fecharManual(); fecharArquivos(); fecharChamados(); fecharRanking(); }
+
+        function abrirRanking() {
+            // SISTEMA HÍBRIDO ATUALIZADO (SEM PISCADA):
+            if (window.location.protocol === 'file:') {
+                // Removemos o fecharTudo() daqui para que o terminal fique na tela até a troca de página, eliminando a piscada da mesa
+                window.location.href = 'ranking.html';
+            } else {
+                // Se estiver rodando em um servidor, fechamos as telas normalmente antes de abrir o modal integrado
+                fecharTudo();
+                const rankingBackdrop = document.getElementById('ranking-backdrop');
+                if (rankingBackdrop) {
+                    rankingBackdrop.style.display = 'flex';
+                }
+            }
+        }
+        function fecharRanking() {
+            const rankingBackdrop = document.getElementById('ranking-backdrop');
+            if (rankingBackdrop) {
+                rankingBackdrop.style.display = 'none';
+            }
+        }
+
+        function abrirManualNaUltimaPagina() {
+            // Fechamos apenas arquivos e chamados. O terminal continua aberto!
+            fecharArquivos(); 
+            fecharChamados();
+
+            const telaBackdrop = document.getElementById('tela-backdrop');
+            const manualBackdrop = document.getElementById('manual-backdrop');
+            const manualWrapper = document.getElementById('manual-wrapper');
+
+            // Se o terminal estiver aberto, aplica a mecânica de transparência e passagem de clique
+            if (telaBackdrop.style.display === 'flex') {
+                telaBackdrop.style.backgroundColor = 'transparent';
+                telaBackdrop.style.pointerEvents = 'none';
+            }
+
+            // Remove o foco do teclado (cursor piscando) do terminal
+            const input = document.getElementById('prompt-input');
+            if (input) {
+                input.blur();
+            }
+
+            // Exibe as camadas do manual
+            manualBackdrop.style.display = 'block';
+            manualWrapper.style.display = 'block';
+
+            const paginas = document.querySelectorAll('#caderno .pagina');
+            
+            // Calcula qual a última página liberada com base na variável "paginasLiberadas"
+            let maxIndex = paginasLiberadas - 1;
+            if (maxIndex >= paginas.length) maxIndex = paginas.length - 1;
+            if (maxIndex < 0) maxIndex = 0;
+            
+            paginaAtual = maxIndex;
+            travado = false;
+
+            paginas.forEach((pag, index) => {
+                pag.className = 'pagina';
+                if (index === paginaAtual) pag.classList.add('ativa');
+            });
+
+            // Foca o manual em primeiro plano, deixando o terminal no fundo
+            focarManual();
+        }
+        function clicarChamados() { fecharTela(); fecharManual(); document.getElementById('chamados-backdrop').style.display = 'flex'; }
+        function fecharChamados() { document.getElementById('chamados-backdrop').style.display = 'none'; }
+        function clicarArquivos() { fecharTela(); fecharManual(); document.getElementById('arquivos-backdrop').style.display = 'flex'; }
+        function fecharArquivos() { document.getElementById('arquivos-backdrop').style.display = 'none'; }
+
+        /* MANUAL E PÁGINAS */
+        let paginaAtual = 0;
+        let paginasLiberadas = 1; // Ao abrir a página inicialmente, só temos a Capa/Intro (index 0) liberada.
+        let travado = false;
+
+        function clicarManual() {
+            fecharArquivos(); fecharChamados();
+            document.getElementById('manual-backdrop').style.display = 'block';
+            document.getElementById('manual-wrapper').style.display = 'block';
+            resetarPaginas();
+            if (document.getElementById('tela-backdrop').style.display === 'flex') {
+                document.getElementById('tela-backdrop').style.backgroundColor = 'transparent';
+                document.getElementById('tela-backdrop').style.pointerEvents = 'none';
+                focarTela(); 
+            } else {
+                document.getElementById('manual-wrapper').style.zIndex = '450'; 
+            }
+        }
+        function fecharManual() { document.getElementById('manual-backdrop').style.display = 'none'; document.getElementById('manual-wrapper').style.display = 'none'; }
+        
+        function resetarPaginas() {
+            const paginas = document.querySelectorAll('#caderno .pagina');
+            paginas.forEach((pag, index) => {
+                pag.className = 'pagina';
+                if (index === paginaAtual) pag.classList.add('ativa');
+            });
+        }
+
+        function cliqueNoCaderno(event) {
+            const wrapper = document.getElementById('manual-wrapper');
+            const telaBackdrop = document.getElementById('tela-backdrop');
+            if (telaBackdrop.style.display === 'flex' && wrapper.style.zIndex !== '490') { focarManual(); return; }
+            
+            const caderno = document.getElementById('caderno');
+            const rect = caderno.getBoundingClientRect();
+            if (event.clientX - rect.left > rect.width / 2) mudarPagina(1); else mudarPagina(-1);
+        }
+
+        async function mudarPagina(direcao) {
+            if (travado) return;
+            const paginas = document.querySelectorAll('#caderno .pagina');
+            const novaPaginaIndex = paginaAtual + direcao;
+
+            if (novaPaginaIndex < 0 || novaPaginaIndex >= paginasLiberadas) return;
+
+            travado = true;
+            const paginaSaindo = paginas[paginaAtual];
+            const paginaEntrando = paginas[novaPaginaIndex];
+
+            if (direcao === 1) {
+                paginaEntrando.classList.add('atras');
+                paginaSaindo.classList.add('dobrando');
+                await sleep(250);
+                paginaSaindo.classList.remove('ativa', 'saindo', 'dobrando');
+                paginaSaindo.classList.add('saindo');
+                await sleep(600);
+                paginaSaindo.classList.remove('saindo');
+                paginaEntrando.classList.remove('atras');
+                paginaEntrando.classList.add('ativa');
+            } else {
+                paginaEntrando.classList.add('voltando');
+                paginaEntrando.offsetHeight;
+                paginaEntrando.classList.remove('voltando');
+                paginaEntrando.classList.add('ativa');
+                await sleep(600);
+                paginaSaindo.classList.remove('ativa');
+            }
+            paginaAtual = novaPaginaIndex;
+            travado = false;
+        }
+
+        function sleep(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
+
+        /* LÓGICA DO JOGO TERMINAL DIA 1 */
+        const terminalInput = document.getElementById('prompt-input');
+        const historico = document.getElementById('historico-linhas');
+        const ghostText = document.getElementById('ghost-text');
+        
+        let errosTotaisNoDia = 0;
+
+        let jogoAtivo = false, faseAtual = 0, errosFase = 0, digitando = false;
+
+        const nomeEstagiario = (localStorage.getItem('nomeEstagiario') || 'Estagiário').toUpperCase();
+        document.getElementById('encaminhamento-nome-estagiario').innerText = nomeEstagiario;
+
+        function normalizarTexto(txt) { 
+            if (!txt) return "";
+            return txt.toLowerCase()
+                      .normalize("NFD").replace(/[\u0300-\u036f]/g, "") // Remove acentos
+                      .replace(/[?!.,;]/g, "") // Remove pontuações (Ex: ignora se esquecer o '?')
+                      .replace(/\s+/g, " ")    // Transforma vários espaços em um só
+                      .trim(); 
+        }
+
+        function normalizarCodigo(txt) { 
+            if (!txt) return "";
+            return normalizarTexto(txt)
+                      .replace(/['"]/g, "") // Trata aspas simples e duplas como iguais
+                      .replace(/\s+/g, ""); // Ignora TODOS os espaços dentro dos parênteses
+        }
+        function normalizarCodigo(txt) { return normalizarTexto(txt).replace(/\s+/g, ""); }
+
+        const roteiro = [
+            // Fase 0
+            { prompt: "ATENDIMENTO SE-CTI-26-0001\n\nO primeiro passo é verificar se o terminal\nestá funcionando corretamente.\n\nFaça o computador apresentar:\nTESTE DE TERMINAL INICIADO", esperado: ['print("teste de terminal iniciado")', "print('teste de terminal iniciado')"], dica_valor: "teste de terminal iniciado", erroMsg: "Use o comando print com parênteses e aspas para exibir a mensagem.", sucesso: "TESTE DE TERMINAL INICIADO\n\n<span class='transicao-verde'>[✓] TERMINAL OPERACIONAL</span>", proxEspera: 1000 },
+            
+            // Fase 1
+            { prompt: "O terminal está funcionando.\n\nO usuário deste chamado é:\n\nRafael Mendes\n\nFaça o computador perguntar o nome do usuário e aguardar a resposta.\nA pergunta deverá ser:\n<span class='interacao-amarela'>Qual é o nome do usuário?</span>", esperado: ['input("qual é o nome do usuário?")', "input('qual é o nome do usuário?')"], dica_valor: "Qual é o nome do usuário?", erroMsg: "O programa precisa fazer a pergunta usando a função input().", sucesso: "<span class='transicao-verde'>Qual é o nome do usuário?</span>" },
+            
+            // Fase 2
+            { prompt: "", esperado: ['rafael mendes'], dica_valor: "Rafael Mendes", erroMsg: "Digite exatamente o nome do solicitante (Rafael Mendes).", sucesso: "<span class='transicao-verde'>[✓] INFORMAÇÃO CAPTURADA</span>\n\nUsuário informado:\nRafael Mendes", proxFaseSimulada: true, proxEspera: 1000 },
+            
+            // Fase 3 (ALTERAÇÃO 1 - Preencher lacuna e ficar Verde)
+            { 
+                prompt: "A informação foi recebida, mas precisamos guardá-la\npara não perguntar novamente.\n\nComplete o comando:\n\nusuario = ________(\"Qual é o nome do usuário?\")", 
+                esperado: ['input', 'input()', 'usuario=input("qual é o nome do usuário?")', "usuario=input('qual é o nome do usuário?')"], 
+                dica_valor: "input", 
+                erroMsg: "Preencha a lacuna com a função usada para receber dados do usuário.", 
+                sucesso: "<span class='transicao-verde'>[✓] INFORMAÇÃO ARMAZENADA</span>", 
+                proxEspera: 1000,
+                substituirComando: 'usuario = input("Qual é o nome do usuário?")' // <--- Faz a mágica do verde!
+            },
+            
+            // Fase 4
+            { prompt: "Agora mostre o nome do usuário utilizando a variável <span class='interacao-amarela'>usuario</span>.", esperado: ['print(usuario)'], dica_variavel: "usuario", erroMsg: "Use print() referenciando a variável 'usuario' (sem usar aspas).", sucesso: "Rafael Mendes\n\n<span class='transicao-verde'>[✓] VARIÁVEL UTILIZADA</span>", proxEspera: 1000 },
+            
+            // Fase 5
+            { prompt: "========================================\n             ESTAÇÃO ATD-07\n========================================\n\nO usuário informou que a estação está ligada.\n\nRegistre essa informação usando a variável:\n<span class='interacao-amarela'>computador_ligado</span>\n\nO valor deve representar VERDADEIRO.", esperado: ['computador_ligado = True', 'computador_ligado = true', 'computador_ligado=True', 'computador_ligado=true'], dica_variavel: "computador_ligado", dica_valor: "True", erroMsg: "Crie a variável 'computador_ligado' e atribua a ela o valor booleano True.", sucesso: "<span class='transicao-verde'>[✓] ESTADO REGISTRADO</span>\n\nATD-07\nCOMPUTADOR: LIGADO", proxEspera: 1000 },
+            
+            // Fase 6 (ALTERAÇÕES 2 e 3)
+            { prompt: "A informação sobre o estado da estação foi registrada.\n\nAgora a estação também precisa saber o que fazer\nquando o computador NÃO estiver ligado.\n\nOrganize as instruções abaixo para formar o código correto:\n\n[ print(\"VERIFICAR ESTAÇÃO\") ]\n[ else: ]\n[ if computador_ligado: ]\n[ print(\"ESTAÇÃO OPERACIONAL\") ]\n\nDigite as linhas na ordem correta, uma por vez, e pressione Enter.", esperado: ['if computador_ligado:', 'if computador_ligado == True:', 'if computador_ligado == true:'], dica_variavel: "if computador_ligado:", erroMsg: "A estrutura de decisão deve começar avaliando a condição com 'if'.", sucesso: "", proxEspera: 0 },
+            
+            // Fase 7
+            { prompt: "", esperado: ['    print("estação operacional")', '    print(\'estação operacional\')', 'print("estação operacional")', 'print(\'estação operacional\')'], dica_valor: '    print("ESTAÇÃO OPERACIONAL")', erroMsg: "O que acontece se a condição for verdadeira? Digite o comando esperado.", sucesso: "", proxEspera: 0 },
+            
+            // Fase 8
+            { prompt: "", esperado: ['else:'], dica_valor: "else:", erroMsg: "Use 'else:' para definir o caminho alternativo.", sucesso: "", proxEspera: 0 },
+            
+            // Fase 9
+            { prompt: "", esperado: ['    print("verificar estação")', '    print(\'verificar estação\')', 'print("verificar estação")', 'print(\'verificar estação\')'], dica_valor: '    print("VERIFICAR ESTAÇÃO")', erroMsg: "O que acontece se a condição for falsa? Digite o comando esperado.", sucesso: "<span class='transicao-verde'>[✓] IF / ELSE CONCLUÍDO</span>", proxEspera: 1200 },
+            
+            // Fase 10 (ALTERAÇÃO 4)
+            { prompt: "O supervisor precisa do resultado final.\n\nA estação está ligada.\n\nO diagnóstico deve apresentar:\n[OK] DIAGNÓSTICO CONCLUÍDO\n\nMonte a instrução necessária para que o terminal\nconfirme o diagnóstico.\n\n(Comece verificando a condição na 1ª linha)", esperado: ['if computador_ligado:', 'if computador_ligado == True:'], dica_variavel: "if computador_ligado:", erroMsg: "Você precisa verificar a condição novamente usando 'if'.", sucesso: "", proxEspera: 0 },
+            
+            // Fase 11
+            { prompt: "", esperado: ['    print("[ok] diagnóstico concluído")', '    print(\'[ok] diagnóstico concluído\')', 'print("[ok] diagnóstico concluído")', 'print(\'[ok] diagnóstico concluído\')'], dica_valor: '    print("[OK] DIAGNÓSTICO CONCLUÍDO")', erroMsg: "Execute a ação esperada dentro do if usando o print().", sucesso: `[OK] DIAGNÓSTICO CONCLUÍDO\n\n<span class='transicao-verde'>[✓] DIAGNÓSTICO CONCLUÍDO</span>\n\n=======================================\n             DIAGNÓSTICO REGISTRADO\n=======================================\n\nRESPOSTA DO MARCOS:\n\n${nomeEstagiario},\n\nPrimeiro atendimento concluído.\n\nVocê começou verificando se o terminal funcionava. Depois aprendeu a receber informações, guardá-las e tomar decisões usando if e else.\n\nEsse é o princípio.\n\n— Marcos Almeida\nSupervisor de TI\n\n=======================================\n\n<span class='interacao-amarela' style='cursor:pointer' onclick='encerrarDia()'>[ ENCERRAR DIA ]</span>` }
+        ];
+
+        async function iniciarTerminalDia1() {
+            errosTotaisNoDia = 0; // Reseta o rastreamento ao iniciar o dia
+            // GATILHO DE ENTRADA (MANDA PING SILENCIOSO PARA O RENDER ACORDAR EM SEGUNDO PLANO)
+            if (window.location.protocol !== 'file:') {
+                fetch('/api/server-status').catch(function() {});
+            }
+            fecharChamados(); clicarTela();
+            
+            // Removida a linha que forçava o display:flex, pois a barra já nasce visível!
+            historico.innerHTML = "";
+            document.getElementById('btn-iniciar-jogo').style.display = 'none';
+            document.getElementById('chamado-status').innerText = "Em atendimento";
+            document.getElementById('chamado-status').style.color = "#FF9F1C";
+            
+            // LIBERAÇÃO IMEDIATA DA PÁGINA "PRINT" (Index 1) NO INÍCIO DO JOGO
+            paginasLiberadas = Math.max(paginasLiberadas, 2);
+
+            jogoAtivo = true; faseAtual = 0; errosFase = 0; digitando = true;
+            terminalInput.disabled = true; document.getElementById('area-input').style.opacity = '.3';
+            
+            await escreverNoTerminal(roteiro[0].prompt);
+            
+            digitando = false; terminalInput.disabled = false;
+            document.getElementById('area-input').style.opacity = '1';
+            terminalInput.focus();
+        }
+
+        async function escreverNoTerminal(texto) {
+            if (!texto) return;
+            const linhas = texto.split('\n');
+            for (let i = 0; i < linhas.length; i++) {
+                const div = document.createElement('div');
+                div.innerHTML = linhas[i].trim() === "" ? "<br>" : linhas[i];
+                historico.appendChild(div);
+                rolarParaBaixo();
+                await sleep(150);
+            }
+        }
+        function rolarParaBaixo() { const c = document.getElementById('historico-linhas'); c.scrollTop = c.scrollHeight; }
+        
+        document.getElementById('terminal-foco').addEventListener('click', () => { 
+            // Só foca na barra de digitação se o usuário não estiver selecionando/copiando um texto
+            if (window.getSelection().toString().length === 0) {
+                if(!terminalInput.disabled) terminalInput.focus(); 
+            }
+        });
+
+        terminalInput.addEventListener('input', function() {
+            if(!jogoAtivo) return;
+            ghostText.innerHTML = "";
+            if(errosFase >= 1) {
+                const f = roteiro[faseAtual], txt = this.value;
+                if(f.dica_valor && txt.length > 0) {
+                    let p = txt.toLowerCase(), alvo = f.dica_valor.toLowerCase();
+                    let inicio = p.indexOf('("');
+                    if(inicio < 0) inicio = p.indexOf("('");
+                    if(inicio >= 0) {
+                        let pref = txt.substring(0, inicio + 2), dig = txt.substring(inicio + 2);
+                        if(alvo.startsWith(dig.toLowerCase())) ghostText.innerHTML = '<span style="visibility:hidden">' + txt.replace(/</g, "&lt;") + '</span>' + f.dica_valor.substring(dig.length);
+                    }
+                } else if(f.dica_variavel && txt.length > 0 && f.dica_variavel.toLowerCase().startsWith(txt.toLowerCase())) {
+                    ghostText.innerHTML = '<span style="visibility:hidden">' + txt.replace(/</g, "&lt;") + '</span>' + f.dica_variavel.substring(txt.length);
+                }
+            }
+        });
+
+        terminalInput.addEventListener('keypress', async function(e) {
+            if(e.key !== 'Enter' || terminalInput.disabled || digitando) return;
+            
+            const bruto = this.value;
+            const cmdLimpo = bruto.trim().toLowerCase();
+            if(!bruto.trim()) return;
+
+            // 1. COMANDO RANKING (Funciona sempre)
+            if (cmdLimpo === 'ranking') {
+                abrirRanking();
+                this.value = ""; ghostText.innerHTML = "";
+                return;
+            }
+
+            // 2. COMANDO RESET (Funciona sempre)
+            if (cmdLimpo === 'reset' || cmdLimpo === 'reset-conquistas') {
+                localStorage.removeItem(nomeEstagiario + '_conquistaAranha');
+                location.reload();
+                return;
+            }
+
+            // 3. SE O ATENDIMENTO NÃO COMEÇOU, QUALQUER OUTRO COMANDO EXIBE AVISO (Igual ao Dia 0)
+            if (!jogoAtivo) {
+                const divCmd = document.createElement('div');
+                divCmd.innerHTML = `C:\\SEMAE\\ATD-07&gt; <span style="color:#fff;">${bruto}</span>`;
+                historico.appendChild(divCmd);
+                
+                const divMsg = document.createElement('div');
+                divMsg.className = "interacao-amarela";
+                divMsg.style.marginTop = "10px";
+                divMsg.style.marginBottom = "10px";
+                divMsg.innerText = "Nenhum atendimento iniciado. Verifique seus chamados.";
+                historico.appendChild(divMsg);
+                
+                this.value = ""; ghostText.innerHTML = ""; rolarParaBaixo();
+                return;
+            }
+
+            // A partir daqui, o jogo está ativo e rodando
+            digitando = true; terminalInput.disabled = true;
+            document.getElementById('area-input').style.opacity = '.3';
+
+            const f = roteiro[faseAtual];
+            const divCmd = document.createElement('div');
+            let aceitarComando = false;
+
+            // 4. ATALHO ZMTX (Força o comando a ser aceito visualmente)
+            if(cmdLimpo === 'zmtx') {
+                const comandoCorreto = f.substituirComando ? f.substituirComando : (f.esperado[0] || ""); 
+                const corComando = f.substituirComando ? 'var(--cor-sucesso)' : '#fff';
+                divCmd.innerHTML = `C:\\SEMAE\\ATD-07&gt; <span style="color:${corComando};">${comandoCorreto}</span>`;
+                historico.appendChild(divCmd);
+                this.value = ""; ghostText.innerHTML = ""; rolarParaBaixo();
+                
+                aceitarComando = true; // Força aceitação e deixa escorregar para o bloco de sucesso abaixo
+            } 
+            // 5. DIGITAÇÃO E VALIDAÇÃO NORMAL DO JOGADOR
+            else {
+                // Exibe o comando digitado no terminal inicialmente
+                divCmd.innerHTML = `C:\\SEMAE\\ATD-07&gt; <span style="color:#fff;">${bruto}</span>`;
+                historico.appendChild(divCmd);
+                this.value = ""; ghostText.innerHTML = ""; rolarParaBaixo();
+
+                if(cmdLimpo === 'clear' || cmdLimpo === 'cls') {
+                    historico.innerHTML = "";
+                    await escreverNoTerminal(f.prompt);
+                    digitando = false; terminalInput.disabled = false; document.getElementById('area-input').style.opacity = '1'; terminalInput.focus();
+                    return;
+                }
+
+                // Varre as respostas esperadas da fase ativa
+                for(let esperado of f.esperado) {
+                    if (esperado.includes('(') || esperado.includes('=')) {
+                        if (normalizarCodigo(bruto) === normalizarCodigo(esperado)) { aceitarComando = true; break; }
+                    } else {
+                        if (normalizarTexto(bruto) === normalizarTexto(esperado)) { aceitarComando = true; break; }
+                    }
+                }
+            }
+
+            // =================================================================
+            // BLOCO ÚNICO DE SUCESSO (Executa para Digitação Correta OU para ZMTX)
+            // =================================================================
+            if(aceitarComando) {
+                let textoSucesso = f.sucesso;
+
+                // Se for a última fase (Fase 11) e passou sem erros
+                if (faseAtual === 11) {
+                    const conquistaAranha = (errosTotaisNoDia === 0);
+
+                    // GATILHO DE CONCLUSÃO (ENVIO ASSÍNCRONO EM SEGUNDO PLANO)
+                    if (window.location.protocol !== 'file:') {
+                        fetch('/api/save-score', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ estrelas: 2, conquista_aranha: conquistaAranha }) // Estrela do Dia 1 = 2 (Aprendiz=1, Estagiário=2)
+                        }).catch(function() {});
+                    }
+
+                    // Se passou perfeito (sem cometer erros), ativa a conquista local
+                    if (conquistaAranha) {
+                        if (localStorage.getItem('nomeEstagiario')) {
+                            localStorage.setItem(nomeEstagiario + '_conquistaAranha', 'true');
+                        }
+                        const imgMesa = document.getElementById('imagem-mesa');
+                        if (imgMesa) imgMesa.src = 'mesa2.png';
+
+                        const parteAranha = `\n<span class='transicao-verde'>[✓] CONQUISTA DESBLOQUEADA: ARANHAVERSO</span>\n\n<span style='color: var(--cor-texto)'>Você concluiu o dia de trabalho com zero erros no terminal! Temos uma surpresa para você na sua mesa de trabalho.</span>\n\n=======================================`;
+                        textoSucesso = textoSucesso.replace("=======================================\n\n<span class='interacao-amarela'", parteAranha + "\n\n<span class='interacao-amarela'");
+                    }
+                }
+
+                // Modifica o texto digitado para a versão Verde Completa (Apenas se não for ZMTX e a Fase pedir)
+                if (cmdLimpo !== 'zmtx' && f.substituirComando) {
+                    divCmd.innerHTML = `C:\\SEMAE\\ATD-07&gt; <span style="color:var(--cor-sucesso);">${f.substituirComando}</span>`;
+                }
+                
+                await escreverNoTerminal(textoSucesso);
+                avancar();
+            } 
+            // =================================================================
+            // BLOCO ÚNICO DE ERRO
+            // =================================================================
+            else {
+                errosFase++;
+                errosTotaisNoDia++; // Rastreia erros totais acumulados no dia
+
+                const divErro = document.createElement('div');
+                divErro.style.marginTop = "15px";
+                divErro.style.marginBottom = "15px";
+                divErro.style.lineHeight = "1.6";
+                
+                if (f.proxFaseSimulada) {
+                    divErro.innerHTML = `
+                        <div style="color:#8da1ad; font-size: 0.95rem; font-style: italic;">&gt; Entrada lida: ${bruto}</div>
+                        <div style="color:#ff5f56; font-weight: bold; margin-top: 5px;">[ERRO] Informação inválida.</div>
+                        <div style="color:#cccccc; margin-top: 5px;"><span style="color:var(--cor-destaque); font-weight: bold;">DICA:</span> ${f.erroMsg || "Verifique o que foi digitado."}</div>
+                    `;
+                } else {
+                    divErro.innerHTML = `
+                        <div style="color:#8da1ad; font-size: 0.95rem; font-style: italic;">&gt; Comando lido: ${bruto}</div>
+                        <div style="color:#ff5f56; font-weight: bold; margin-top: 5px;">[ERRO] Comando inválido.</div>
+                        <div style="color:#cccccc; margin-top: 5px;"><span style="color:var(--cor-destaque); font-weight: bold;">DICA:</span> ${f.erroMsg || "Verifique a sintaxe e tente novamente."}</div>
+                    `;
+                }
+                
+                historico.appendChild(divErro);
+
+                // LÓGICA DO FANTASMA
+                if (errosFase === 3) {
+                    const divFantasma = document.createElement('div');
+                    divFantasma.style.color = "#5FDCF2"; 
+                    divFantasma.style.marginTop = "15px";
+                    divFantasma.style.fontWeight = "bold";
+                    divFantasma.style.lineHeight = "1.5";
+                    divFantasma.innerHTML = `★ UMA PRESENÇA ESTRANHA SURGE NO TERMINAL ★<br><br>` +
+                    `“Bhuuuu... calma, estagiário!”<br><br>` +
+                    `Parece que essa tarefa está dando trabalho, hein?<br>` +
+                    `Se estiver com dificuldades, não precisa sofrer sozinho.<br><br>` +
+                    `<span style="color: #FF9F1C; cursor: pointer; text-decoration: underline;" onclick="abrirManualNaUltimaPagina(); event.stopPropagation();">[Clique aqui]</span> para consultar a ajuda do Manual dos Estagiários.<br><br>` +
+                    `“Eu também já precisei consultar... várias vezes.”<br>`;
+                    historico.appendChild(divFantasma);
+                }
+
+                rolarParaBaixo();
+                
+                digitando = false; terminalInput.disabled = false; document.getElementById('area-input').style.opacity = '1'; terminalInput.focus();
+                terminalInput.dispatchEvent(new Event('input'));
+            }
+        });
+
+        async function avancar() {
+            faseAtual++; 
+            errosFase = 0;
+            
+            // LIBERAÇÃO PROGRESSIVA DE PÁGINAS DO MANUAL:
+            if(faseAtual === 1) paginasLiberadas = Math.max(paginasLiberadas, 3); // Fase 1 -> Libera INPUT (Pág 2)
+            if(faseAtual === 3) paginasLiberadas = Math.max(paginasLiberadas, 4); // Fase 3 -> Libera VARIÁVEIS (Pág 3)
+            if(faseAtual === 5) paginasLiberadas = Math.max(paginasLiberadas, 5); // Fase 5 -> Libera BOOLEANOS (Pág 4)
+            if(faseAtual === 6) paginasLiberadas = Math.max(paginasLiberadas, 6); // Fase 6 -> Libera IF (Pág 5)
+            if(faseAtual === 8) paginasLiberadas = Math.max(paginasLiberadas, 7); // Fase 8 -> Libera ELSE (Pág 6)
+
+            if (faseAtual < roteiro.length) {
+                const prox = roteiro[faseAtual];
+                if (roteiro[faseAtual-1].proxEspera) await sleep(roteiro[faseAtual-1].proxEspera);
+                if (!prox.proxFaseSimulada) await escreverNoTerminal(prox.prompt);
+                
+                digitando = false; 
+                terminalInput.disabled = false; 
+                document.getElementById('area-input').style.opacity = '1'; 
+                terminalInput.focus();
+            } else {
+                jogoAtivo = false;
+                document.getElementById('area-input').style.display = 'none';
+                document.getElementById('badge-sidebar').textContent = "Concluído";
+                document.getElementById('badge-sidebar').style.backgroundColor = "rgba(69, 207, 138, 0.15)";
+                document.getElementById('badge-sidebar').style.color = "var(--cor-sucesso)";
+                document.getElementById('badge-sidebar').style.borderColor = "var(--cor-sucesso)";
+                document.getElementById('chamado-status').innerText = "Concluído";
+                document.getElementById('chamado-status').style.color = "var(--cor-sucesso)";
+            }
+        }
+
+        function encerrarDia() { 
+            alert("Dia 1 concluído com sucesso! Progresso salvo no perfil de " + nomeEstagiario + ".");
+        }
+    </script>
+
+
+<div class="ranking-backdrop" id="ranking-backdrop" onclick="fecharRanking()">
+        <div style="position: relative; display: flex; flex-direction: column; align-items: center;" onclick="event.stopPropagation()">
+            <!-- Este botão é controlado diretamente pelo jogo pai, burlado 100% dos bloqueios de segurança -->
+            <button onclick="fecharRanking()" style="position: absolute; top: -45px; right: 0; background: #121f27; border: 2px solid var(--cor-texto); color: var(--cor-texto); font-family: 'Consolas', monospace; font-weight: bold; font-size: 1rem; padding: 6px 16px; cursor: pointer; border-radius: 4px; transition: 0.15s; outline: none;">FECHAR [X]</button>
+            <iframe src="ranking.html" class="ranking-iframe-janela"></iframe>
+        </div>
+    </div>
+
+</body>
+</html>

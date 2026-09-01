@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Diário de um Estagiário - CTI/SEMAE</title>
+    <style>
+        /* Paleta de cores baseada nas especificações técnicas do SEMAE */
+        :root {
+            --cor-fundo: #000000;      /* Fundo preto puro solicitado */
+            --cor-texto: #5FDCF2;      /* Ciano retrô "água clara" */
+            --cor-destaque: #FF9F1C;   /* Laranja de alerta/destaque */
+            --cor-sucesso: #45CF8A;    /* Verde para conexão estável */
+        }
+
+        /* Flexbox configurado para manter TUDO 100% centralizado */
+        body {
+            background-color: var(--cor-fundo);
+            color: var(--cor-texto);
+            font-family: 'Consolas', 'SF Mono', 'DejaVu Sans Mono', monospace;
+            display: flex;
+            justify-content: center; /* Trava o eixo horizontal no centro */
+            align-items: center;     /* Trava o eixo vertical no centro */
+            height: 100vh;
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            position: relative; /* Permite que o título e o rodapé flutuem sem empurrar a caixa */
+        }
+
+        /* 2. Caixa do Terminal (Agora cravada no centro e do mesmo tamanho) */
+        .terminal-box {
+            width: 100%;
+            max-width: 650px;
+            min-height: 280px;
+            background-color: #051520;
+            border: 2px solid var(--cor-texto);
+            border-radius: 8px;
+            padding: 30px;
+            box-shadow: 0 0 25px rgba(95, 220, 242, 0.15);
+            box-sizing: border-box;
+            text-align: center;
+            
+            /* ADICIONE ESTAS DUAS LINHAS: */
+            opacity: 0;
+            transition: opacity 0.5s ease-in-out;
+        }
+
+        /* ADICIONE ESTA NOVA CLASSE LOGO ABAIXO: */
+        .terminal-box.visivel {
+            opacity: 1;
+        }
+
+        .terminal-line {
+            margin: 12px 0;
+            white-space: pre-wrap;
+            line-height: 1.6;
+        }
+
+        .sub-titulo {
+            font-size: 1.1rem;
+            margin-bottom: 25px;
+        }
+
+        /* Área de entrada de dados */
+        .input-box {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            margin: 15px 0;
+        }
+
+        .input-box span {
+            user-select: none;
+        }
+
+        input[type="text"] {
+            background: transparent;
+            border: none;
+            color: var(--cor-destaque);
+            font-family: inherit;
+            font-size: 1rem;
+            width: 220px;
+            text-align: center;
+            outline: none;
+            border-bottom: 2px dashed var(--cor-texto);
+            padding: 2px 5px;
+        }
+
+        button {
+            background: transparent;
+            border: 1px solid transparent;
+            color: var(--cor-sucesso);
+            font-family: inherit;
+            font-size: 1.1rem;
+            cursor: pointer;
+            padding: 10px 15px;
+            margin-top: 15px;
+            transition: background 0.3s, border-color 0.3s;
+        }
+
+        button:hover, button:focus {
+            background: rgba(69, 207, 138, 0.1);
+            border-color: var(--cor-sucesso);
+            outline: none;
+        }
+
+        /* 3. Rodapé posicionado de forma absoluta na parte de baixo */
+        .footer-ascii {
+            position: absolute;
+            bottom: 30px; /* Distância do fundo da tela */
+            text-align: center;
+            font-size: 0.85rem;
+            letter-spacing: 1px;
+            width: 100%;
+        }
+
+        #progress-bar {
+            color: var(--cor-destaque);
+            margin-top: 5px;
+            font-weight: bold;
+        }
+
+        .text-left {
+            text-align: left;
+        }
+
+        /* ========================================================= */
+        /* AQUI VOCÊ ALTERA O TAMANHO E ALTURA DO TÍTULO             */
+        /* ========================================================= */
+        
+        .header-externo {
+            position: absolute; /* Impede que o título empurre a caixa para baixo */
+            width: 100%;
+            text-align: center;
+            
+            /* ALTERE A ALTURA AQUI (Distância do topo) */
+            /* Aumente o número para descer (ex: 80px), diminua para subir (ex: 20px) */
+            top: 12vh; 
+
+        }
+        
+        
+        .titulo-jogo {
+            color: var(--cor-destaque);
+            font-weight: bold;
+            letter-spacing: 1px;
+            margin: 30px 0;
+            
+            /* ALTERE O TAMANHO DO TÍTULO AQUI */
+            font-size: 4.3rem; 
+        }
+        /* ========================================================= */
+
+        /* Estilos para a Tela 3 (Imagem Centralizada) */
+        #screen-3 {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background-color: #000000;
+            display: none; /* Inicia oculta */
+            justify-content: center;
+            align-items: center;
+            z-index: 9999; /* Fica acima de tudo */
+        }sa
+
+        .imagem-centralizada {
+            max-width: 50%;
+            max-height: 50%;
+            object-fit: contain;
+            border: 2px solid var(--cor-texto); /* Mantém a borda ciano para combinar com o tema */
+            border-radius: 4px;
+        }
+
+    </style>
+</head>
+<body>
+
+    <!-- Cabeçalho Externo (Flutuando no topo, altura ajustável no CSS) -->
+   <div class="header-externo" id="cabecalho-principal">
+        <div id="div-sup"></div>
+        <div class="titulo-jogo" id="titulo-texto"></div>
+        <div id="div-inf"></div>
+    </div>
+
+    <!-- Terminal Box Principal (Sempre no centro exato da tela) -->
+    <div class="terminal-box" id="terminal">
+        <!-- Tela 1: Carrega instantaneamente junto com o retângulo -->
+        <div id="screen-1">
+            <div class="terminal-line sub-titulo" id="subtitulo-texto">PRIMEIRO DIA</div>
+            <div class="terminal-line" id="label-nome">Digite seu nome:</div>
+            
+            <div id="form-area">
+                <div class="input-box">
+                    <span>[</span>
+                    <input type="text" id="username" autocomplete="off" maxlength="20" autofocus />
+                    <span>]</span>
+                </div>
+                <div>
+                    <button id="btn-entrar">[ ENTRAR ]</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tela 2: Perfil do estagiário (Nasce exatamente no mesmo lugar da tela 1) -->
+        <div id="screen-2" style="display: none;"></div>
+    </div>
+
+    <!-- Barra de Progresso ASCII no Fundo da Tela -->
+    <div class="footer-ascii" id="conexao-ascii">
+        <div id="progress-status">CONECTANDO AO HOST...</div>
+        <div id="progress-bar">[░░░░░░░░░░] 0%</div>
+    </div>
+
+    <!-- Nova Tela 3 para carregar a imagem do escritório -->
+    <div id="screen-3">
+        <img src="sala.png" alt="Sala do Escritório" class="imagem-centralizada" />
+    </div>
+
+    <script>
+        const sleep = ms => new Promise(r => setTimeout(r, ms));
+        let skipTyping = false;
+
+        document.addEventListener('click', (event) => {
+            if (event.detail === 3) skipTyping = true;
+        });
+
+        function typeText(element, text, speed) {
+            return new Promise(resolve => {
+                let i = 0;
+                function type() {
+                    if (skipTyping) {
+                        element.innerHTML += text.substring(i);
+                        resolve();
+                        return;
+                    }
+                    if (i < text.length) {
+                        element.innerHTML += text.charAt(i);
+                        i++;
+                        setTimeout(type, speed);
+                    } else {
+                        resolve();
+                    }
+                }
+                type();
+            });
+        }
+
+        async function printLineSlow(container, text, speed = 20, alignClass = 'text-left') {
+            const div = document.createElement('div');
+            div.className = `terminal-line ${alignClass}`;
+            container.appendChild(div);
+            await typeText(div, text, speed);
+            if (!skipTyping) await sleep(150);
+        }
+
+        async function printEstagiarioLine(container, name, speed = 25) {
+            const div = document.createElement('div');
+            div.className = 'terminal-line text-left';
+            container.appendChild(div);
+
+            const labelSpan = document.createElement('span');
+            div.appendChild(labelSpan);
+            await typeText(labelSpan, "Estagiário: ", speed);
+
+            const nameSpan = document.createElement('span');
+            nameSpan.style.color = 'var(--cor-destaque)';
+            nameSpan.style.fontWeight = 'bold';
+            div.appendChild(nameSpan);
+            await typeText(nameSpan, name, speed);
+
+            if (!skipTyping) await sleep(150);
+        }
+
+        async function rodarBarraAscii() {
+            const bar = document.getElementById('progress-bar');
+            const status = document.getElementById('progress-status');
+            const frames = [
+                { text: '[░░░░░░░░░░] 0%', delay: 250 },
+                { text: '[██░░░░░░░░] 20%', delay: 300 },
+                { text: '[█████░░░░░] 50%', delay: 250 },
+                { text: '[████████░░] 80%', delay: 300 },
+                { text: '[██████████] 100%', delay: 400 }
+            ];
+
+            for (let frame of frames) {
+                if (skipTyping) {
+                    bar.innerHTML = '[██████████] 100%';
+                    break;
+                }
+                bar.innerHTML = frame.text;
+                await sleep(frame.delay);
+            }
+            status.innerHTML = 'CONEXÃO ESTÁVEL - HUB SEMAE';
+            status.style.color = 'var(--cor-sucesso)';
+        }
+
+        // Inicialização: O conteúdo da tela 1 já carrega direto (Sem atraso)
+        async function iniciarPagina1() {
+            skipTyping = false;
+
+            const divSup = document.getElementById('div-sup');
+            const tituloTexto = document.getElementById('titulo-texto');
+            const divInf = document.getElementById('div-inf');
+
+            // Garante que os elementos comecem limpos para a animação
+            divSup.innerHTML = '';
+            tituloTexto.innerHTML = '';
+            divInf.innerHTML = '';
+
+            // Inicializa a barra de carregamento simultaneamente
+            rodarBarraAscii();
+
+            // 1. Digita a linha superior (divisor) de forma rápida (velocidade 5)
+            await typeText(divSup, "==================================================================================================", 5);
+            if (!skipTyping) await sleep(150);
+
+            // 2. Digita o título principal (velocidade 20)
+            await typeText(tituloTexto, "DIÁRIO DE UM ESTAGIÁRIO", 20);
+            if (!skipTyping) await sleep(150);
+
+            // 3. Digita a linha inferior (divisor) de forma rápida (velocidade 5)
+            await typeText(divInf, "==================================================================================================", 5);
+            if (!skipTyping) await sleep(150);
+
+            // >>> ADICIONE ESTAS DUAS LINHAS AQUI: <<<
+            const terminal = document.getElementById('terminal');
+            terminal.classList.add('visivel');
+
+            // Habilita controles do formulário (o resto do seu código continua igual abaixo...)
+            const input = document.getElementById('username');
+            const btn = document.getElementById('btn-entrar');
+
+            if (input) input.focus();
+
+            const enviarFormulario = () => {
+                const name = input.value.trim();
+                if (name) {
+                    carregarTela2(name);
+                } else {
+                    input.style.borderColor = '#E04A5F';
+                    setTimeout(() => input.style.borderColor = 'var(--cor-texto)', 1000);
+                }
+            };
+
+            btn.addEventListener('click', enviarFormulario);
+            input.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') enviarFormulario();
+            });
+        }
+
+        // Transição para Tela 2
+        async function carregarTela2(name) {
+            localStorage.setItem('nomeEstagiario', name);
+
+            // Esconde o título e o rodapé. Como estão "absolute", a caixa principal NÃO sai do lugar!
+            document.getElementById('cabecalho-principal').style.display = 'none';
+            document.getElementById('conexao-ascii').style.display = 'none';
+            
+            const screen1 = document.getElementById('screen-1');
+            const screen2 = document.getElementById('screen-2');
+            
+            screen1.style.display = 'none';
+            screen2.style.display = 'block';
+            screen2.innerHTML = ''; 
+
+            skipTyping = false; 
+
+            // Carregamento da Tela 2
+            await printLineSlow(screen2, "CARREGANDO PERFIL...", 25);
+            await printEstagiarioLine(screen2, name.toUpperCase(), 25);
+            await printLineSlow(screen2, "Setor: Tecnologia da Informação", 25);
+            await printLineSlow(screen2, "Cargo: Estagiário de TI", 25);
+            await printLineSlow(screen2, "Status:", 25);
+            await printLineSlow(screen2, "NOVO ESTAGIÁRIO", 25);
+
+            const finalPrompt = document.createElement('div');
+            finalPrompt.className = 'terminal-line text-left';
+            finalPrompt.style.color = 'var(--cor-sucesso)';
+            finalPrompt.style.marginTop = '25px';
+            screen2.appendChild(finalPrompt);
+            await typeText(finalPrompt, "[ Pressione qualquer tecla ou clique para iniciar o seu turno... ]", 15);
+
+            // Função de transição unificada (teclado ou clique)
+            function avancar() {
+                document.removeEventListener('keydown', avancar);
+                document.removeEventListener('click', avancar);
+                
+                // Exibe a imagem de transição
+                carregarTela3(); 
+
+                // REDIRECIONAMENTO HÍBRIDO INTELIGENTE:
+                if (window.location.protocol === 'file:') {
+                    window.location.href = "mesa.html"; // Localmente abre o arquivo mesa.html (tudo minúsculo)
+                } else {
+                    window.location.href = "/pi2"; // No servidor Render abre a rota /pi2
+                }
+            }
+
+            // Aguarda um pequeno intervalo para evitar que o clique do ENTRAR passe direto
+            setTimeout(() => {
+                document.addEventListener('keydown', avancar);
+                document.addEventListener('click', avancar);
+            }, 300);
+        }
+
+        // Função de transição para a Tela 3
+        function carregarTela3() {
+            // Esconde a caixa do terminal
+            document.getElementById('terminal').style.display = 'none';
+            
+            // Exibe a tela 3 com display flex para alinhar a imagem no centro exato
+            const screen3 = document.getElementById('screen-3');
+            screen3.style.display = 'flex';
+        }
+
+        window.onload = iniciarPagina1;
+    </script>
+</body>
+</html>

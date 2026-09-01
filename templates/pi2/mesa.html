@@ -1,0 +1,1409 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Diário de um Estagiário - Sua Mesa</title>
+    <style>
+        /* Paleta de cores baseada nas especificações técnicas do SEMAE */
+        :root {
+            --cor-fundo: #000000;      /* Fundo preto puro */
+            --cor-texto: #5FDCF2;      /* Ciano retrô "água clara" */
+            --cor-destaque: #FF9F1C;   /* Laranja de alerta/destaque */
+            --cor-sucesso: #45CF8A;    /* Verde para conexão estável */
+            
+            /* Paleta interna do simulador de chamados */
+            --cor-fundo-navegador: #0d161b;
+            --cor-fundo-painel: #050a0d;
+            --cor-borda: #1e3540;
+            --cor-barra-topo: #121f27;
+            
+            /* Paleta interna do CMD */
+            --cor-fundo-cmd: #000000;
+            --cor-texto-padrao-cmd: #cccccc;
+            --cor-barra-titulo-cmd: #181818;
+            --cor-borda-janela-cmd: #2d2d2d;
+        }
+
+        body {
+            background-color: var(--cor-fundo);
+            color: var(--cor-texto);
+            font-family: 'Consolas', 'SF Mono', 'DejaVu Sans Mono', monospace;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            padding: 20px;
+            box-sizing: border-box;
+            position: relative;
+            overflow: hidden;
+            user-select: none;
+        }
+
+        /* Container da imagem ajustado para posição ideal (top: 0) alinhada com o dia_1 */
+        .sala-container {
+            position: relative;
+            display: inline-block; 
+            max-width: 100%;
+            top: 0; 
+        }
+
+        .imagem-centralizada {
+            display: block;
+            max-width: 50vw;
+            max-height: 50vh;
+            object-fit: contain;
+            border: 2px solid var(--cor-texto);
+            border-radius: 4px;
+        }
+
+        /* Estilo padrão para todos os hitboxes interativos */
+        .hitbox {
+            position: absolute;
+            cursor: pointer;
+            box-sizing: border-box;
+            z-index: 410;
+        }
+
+        /* Coordenadas das Hitboxes */
+        #hitbox-tela {
+            top: 5%;
+            left: 25%;
+            width: 35%;
+            height: 45%;
+        }
+
+        #hitbox-arquivos {
+            top: 74%;
+            left: 60%;
+            width: 25%;
+            height: 25%;
+        }
+
+        #hitbox-manual {
+            top: 18%;
+            left: 70%;
+            width: 26%;
+            height: 36%;
+        }
+
+        #hitbox-chamados {
+            top: 55%;
+            left: 8%;
+            width: 15%;
+            height: 30%;
+        }
+
+        /* LUZ DECORATIVA DO TELEFONE */
+        #luz-telefone {
+            position: absolute;
+            top: 54%;
+            left: 14%;
+            width: 11%;
+            height: 10%;
+            clip-path: polygon(50% 20%, 0% 50%, 10% 90%, 60% 60%);
+            pointer-events: none;
+            display: none;        
+            z-index: 15;
+        }
+
+        #luz-telefone.ativa {
+            display: block;
+            background-color: rgba(95, 220, 242, 0.75);
+            animation: pulsarLuzCyan 1.0s infinite ease-in-out;
+        }
+
+        @keyframes pulsarLuzCyan {
+            0%, 100% {
+                opacity: 0.4;
+                filter: drop-shadow(0 0 10px #5FDCF2);
+            }
+            50% {
+                opacity: 1.0;
+                filter: drop-shadow(0 0 25px #5FDCF2) drop-shadow(0 0 45px #5FDCF2);
+            }
+        }
+
+        /* JANELA FLUTUANTE DE ARQUIVOS */
+        .arquivos-backdrop {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background-color: rgba(0, 0, 0, 0.7);
+            z-index: 600;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .terminal-box {
+            width: 100%;
+            max-width: 520px;
+            background-color: #051520;
+            border: 2px solid var(--cor-texto);
+            border-radius: 8px;
+            padding: 35px 30px;
+            box-shadow: 0 0 25px rgba(95, 220, 242, 0.15);
+            box-sizing: border-box;
+            text-align: center;
+        }
+
+        .titulo-alerta {
+            color: var(--cor-destaque);
+            font-size: 1.5rem;
+            font-weight: bold;
+            letter-spacing: 1px;
+            margin-bottom: 20px;
+        }
+
+        .mensagem-alerta {
+            font-size: 1.1rem;
+            line-height: 1.6;
+        }
+
+        /* ESTILOS DO CADERNO MANUAL */
+        .manual-backdrop {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background-color: rgba(0, 0, 0, 0.4);
+            z-index: 400;
+        }
+
+        /* Wrapper com pointer-events desativado para cliques passarem pelas bordas vazias */
+        .manual-wrapper-posicao {
+            display: none;
+            position: absolute;
+            right: 4%;
+            top: 15%; 
+            z-index: 450;
+            pointer-events: none; 
+        }
+
+        /* Caderno com pointer-events ativado para receber cliques apenas no papel */
+        .caderno-moldura {
+            width: 840px;      
+            height: 1060px;    
+            background-color: #f6ebd0;
+            border-radius: 4px;
+            box-sizing: border-box;
+            position: relative;
+            border-left: 14px solid #2e1d11; 
+            color: #1a1a1a;
+            box-shadow: 
+                1px 1px 0px #d8ccb2, 
+                2px 2px 0px #ffffff, 
+                3px 3px 0px #d8ccb2, 
+                4px 4px 0px #ffffff, 
+                5px 5px 0px #d8ccb2, 
+                6px 6px 18px rgba(0,0,0,0.6);
+            perspective: 1200px;
+            pointer-events: auto; 
+        }
+
+        .pagina {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            padding: 40px 45px 40px 65px;
+            box-sizing: border-box;
+            background-color: #f6ebd0;
+            overflow-y: auto;
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+            background-attachment: local;
+            background-image: 
+                linear-gradient(rgba(0,0,0,0.05) 1px, transparent 1px), 
+                linear-gradient(90deg, rgba(255,0,0,0.15) 1px, transparent 1px);
+            background-size: 100% 34px, 100% 100%;
+            background-position: 0 10px, 45px 0;
+            line-height: 34px;
+            font-size: 1.15rem;
+            display: none;
+            border-radius: 4px;
+            transform-origin: left center;
+            clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%);
+            transition: clip-path 0.25s ease-in-out, transform 0.6s ease-in-out, opacity 0.6s ease;
+        }
+
+        .pagina::-webkit-scrollbar { display: none; }
+        .pagina.ativa { display: block; z-index: 3; }
+        .pagina.atras { display: block; z-index: 1; }
+
+        .pagina::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 0;
+            height: 0;
+            background: linear-gradient(135deg, transparent 50%, rgba(0,0,0,0.15) 50%, rgba(0,0,0,0.1) 55%, #f6ebd0 55%, #e1d3b0 100%);
+            box-shadow: -3px 3px 6px rgba(0,0,0,0.15);
+            transition: width 0.25s ease-in-out, height 0.25s ease-in-out;
+            border-bottom-left-radius: 4px;
+            pointer-events: none;
+        }
+
+        .pagina.dobrando {
+            clip-path: polygon(0 0, calc(100% - 90px) 0, 100% 90px, 100% 100%, 0 100%);
+        }
+
+        .pagina.dobrando::after {
+            width: 90px;
+            height: 90px;
+        }
+
+        .pagina.saindo {
+            display: block;
+            z-index: 4;
+            opacity: 0;
+            transform: rotateY(-110deg);
+            clip-path: polygon(0 0, calc(100% - 90px) 0, 100% 90px, 100% 100%, 0 100%);
+        }
+
+        .pagina.voltando {
+            display: block !important;
+            z-index: 5;
+            opacity: 0;
+            transform: rotateY(-110deg);
+            transition: none !important;
+        }
+
+        .titulo-pagina {
+            font-weight: bold;
+            font-size: 1.5rem;
+            margin-bottom: 15px;
+            color: #2e1d11;
+            text-transform: uppercase;
+            border-bottom: 2px solid #2e1d11;
+            padding-bottom: 5px;
+        }
+
+        .subtitulo-pagina {
+            font-weight: bold;
+            font-size: 1.3rem;
+            margin: 15px 0 10px 0;
+            color: #2e1d11;
+            text-transform: uppercase;
+        }
+
+        .regra-destaque {
+            font-family: "Segoe Print", "Ink Free", "Noteworthy", "Chalkboard SE", "Comic Sans MS", cursive;
+            font-weight: bold;
+            color: #b30000;
+            font-size: 1.2rem;
+            display: inline-block;
+        }
+
+        .assinatura-destaque {
+            font-weight: bold;
+            font-size: 1.25rem;
+            color: #1a1a1a;
+        }
+
+        .assinatura-autor {
+            font-family: "Segoe Print", "Ink Free", "Noteworthy", "Chalkboard SE", "Comic Sans MS", cursive;
+            color: #1a4cd6;
+            font-size: 1.25rem;
+            font-weight: bold;
+            display: inline-block;
+        }
+
+        /* ========================================================= */
+        /* MODAL E INTERFACE DO SIMULADOR DE CHAMADOS                */
+        /* ========================================================= */
+        .chamados-backdrop {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background-color: rgba(0, 0, 0, 0.75);
+            z-index: 500;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .navegador-container {
+            width: 95%;
+            max-width: 1200px;
+            border: 2px solid var(--cor-borda);
+            border-radius: 8px;
+            background-color: var(--cor-fundo-navegador);
+            box-shadow: 0 10px 35px rgba(0, 0, 0, 0.9);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .navegador-topo {
+            background-color: var(--cor-barra-topo);
+            padding: 12px 18px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            border-bottom: 2px solid var(--cor-borda);
+        }
+
+        .botoes-janela {
+            display: flex;
+            gap: 6px;
+        }
+
+        .botao-janela-circulo {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background-color: var(--cor-borda);
+        }
+
+        .barra-endereco {
+            flex-grow: 1;
+            background-color: #050a0d;
+            border: 1px solid var(--cor-borda);
+            border-radius: 4px;
+            padding: 5px 12px;
+            font-size: 0.85rem;
+            color: #a0b2be;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .protocolo-seguro {
+            color: var(--cor-sucesso);
+            font-weight: bold;
+        }
+
+        .botao-fechar-x {
+            font-family: inherit;
+            font-weight: bold;
+            font-size: 1.3rem;
+            color: var(--cor-destaque);
+            cursor: pointer;
+            padding: 0 5px 0 15px;
+            user-select: none;
+            transition: color 0.15s;
+        }
+        .botao-fechar-x:hover {
+            color: #ff5f56;
+        }
+
+        .conteudo-web {
+            display: flex;
+            height: 800px;
+            background-color: var(--cor-fundo-painel);
+        }
+
+        .sidebar-chamados {
+            width: 320px;
+            border-right: 2px solid var(--cor-borda);
+            background-color: #060e12;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .sidebar-titulo {
+            padding: 18px;
+            font-size: 0.95rem;
+            border-bottom: 1px solid var(--cor-borda);
+            font-weight: bold;
+            color: var(--cor-destaque);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .lista-chamados {
+            flex-grow: 1;
+            overflow-y: auto;
+        }
+
+        .painel-principal {
+            flex-grow: 1;
+            padding: 40px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .caixa-titulo-sistema {
+            color: var(--cor-texto);
+            font-size: 1.5rem;
+            margin-bottom: 25px;
+            padding: 12px 30px;
+            border: 2px solid var(--cor-texto);
+            border-radius: 4px;
+            font-weight: bold;
+            letter-spacing: 2px;
+            background-color: rgba(95, 220, 242, 0.05);
+            display: inline-block;
+            align-self: center;
+        }
+
+        .tela-boas-vindas {
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+            align-items: center;
+            text-align: center;
+            height: 100%;
+            color: #8da1ad;
+        }
+
+        .descricao-sistema {
+            max-width: 600px;
+            line-height: 1.8;
+            margin-bottom: 35px;
+            font-size: 0.95rem;
+        }
+
+        .campos-explicacao {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            text-align: left;
+            max-width: 750px;
+            margin-bottom: 35px;
+            font-size: 0.85rem;
+        }
+
+        .campo-info {
+            border: 1px solid var(--cor-borda);
+            padding: 15px;
+            border-radius: 4px;
+            background-color: rgba(30, 53, 64, 0.05);
+            line-height: 1.5;
+        }
+
+        .campo-info strong {
+            color: var(--cor-destaque);
+            display: block;
+            margin-bottom: 5px;
+            font-size: 0.9rem;
+        }
+
+        .alerta-vazio {
+            border: 1px dashed var(--cor-borda);
+            padding: 15px 30px;
+            background-color: rgba(30, 53, 64, 0.1);
+            border-radius: 4px;
+            max-width: 450px;
+        }
+
+        /* ========================================================= */
+        /* JANELA FLUTUANTE DO MONITOR (TELA DO COMPUTADOR - CMD)    */
+        /* ========================================================= */
+        .tela-backdrop {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background-color: rgba(0, 0, 0, 0.75);
+            z-index: 460;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .cmd-janela {
+            width: 95%;
+            max-width: 1200px;
+            background-color: var(--cor-fundo-cmd);
+            border: 1px solid var(--cor-borda-janela-cmd);
+            box-shadow: 0 15px 50px rgba(0, 0, 0, 0.9);
+            border-radius: 8px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            pointer-events: auto;
+        }
+
+        .cmd-titulo-barra {
+            background-color: var(--cor-barra-titulo-cmd);
+            padding: 12px 18px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.85rem;
+            color: #a0a0a0;
+            border-bottom: 1px solid #222222;
+        }
+
+        .cmd-titulo-texto {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .cmd-icone-simulado {
+            width: 12px;
+            height: 12px;
+            background-color: var(--cor-texto);
+            border-radius: 2px;
+        }
+
+        .cmd-controles-janela {
+            display: flex;
+            gap: 15px;
+            font-size: 0.9rem;
+            cursor: pointer;
+        }
+
+        .botao-fechar-cmd {
+            transition: color 0.15s;
+        }
+
+        .botao-fechar-cmd:hover {
+            color: #ff5f56;
+        }
+
+        .cmd-corpo {
+            background-color: var(--cor-fundo-cmd);
+            padding: 40px;
+            height: 800px; 
+            box-sizing: border-box;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            cursor: text;
+        }
+
+        .cmd-corpo::before {
+            content: " ";
+            display: block;
+            position: absolute;
+            top: 0; left: 0; bottom: 0; right: 0;
+            background: linear-gradient(rgba(0, 0, 0, 0) 50%, rgba(255, 255, 255, 0.012) 50%);
+            background-size: 100% 3px;
+            z-index: 10;
+            pointer-events: none;
+        }
+
+        .historico-terminal {
+            flex-grow: 1;
+            overflow-y: auto;
+            font-size: 1.25rem;
+            line-height: 1.6;
+            color: var(--cor-texto-padrao-cmd);
+            white-space: pre-wrap;
+            z-index: 20;
+            padding-right: 10px;
+        }
+
+        .historico-terminal::-webkit-scrollbar {
+            width: 10px;
+        }
+        .historico-terminal::-webkit-scrollbar-track {
+            background: #000;
+        }
+        .historico-terminal::-webkit-scrollbar-thumb {
+            background: #333;
+            border-radius: 4px;
+        }
+
+        .mensagem-inativa {
+            color: var(--cor-destaque);
+            margin-top: 40px;
+            font-weight: bold;
+        }
+
+        .linha-input {
+            display: flex;
+            align-items: center;
+            font-size: 1.25rem;
+            color: var(--cor-texto-padrao-cmd);
+            border-top: 1px solid #1a1a1a;
+            padding-top: 20px;
+            z-index: 20;
+            margin-top: 10px;
+        }
+
+        .prompt-simbolo {
+            margin-right: 12px;
+            font-weight: bold;
+        }
+
+        .campo-entrada {
+            background-color: transparent;
+            border: none;
+            color: #ffffff;
+            font-family: inherit;
+            font-size: 1.25rem;
+            flex-grow: 1;
+            outline: none;
+            caret-color: #ffffff; 
+        }
+
+        /* ========================================================== */
+        /* REGRAS DE ESCALONAMENTO RESPONSIVO (SCALE)                 */
+        /* Reduz os elementos em telas menores sem alterar as fontes  */
+        /* ========================================================== */
+        @media (max-height: 1100px) {
+            .manual-wrapper-posicao {
+                transform: scale(0.8);
+                transform-origin: top right;
+            }
+        }
+
+        @media (max-height: 920px) {
+            .manual-wrapper-posicao {
+                transform: scale(0.7);
+                transform-origin: top right;
+            }
+            .cmd-janela, .navegador-container {
+                transform: scale(0.85);
+                transform-origin: center;
+            }
+        }
+
+        @media (max-height: 760px) {
+            .manual-wrapper-posicao {
+                transform: scale(0.55);
+                transform-origin: top right;
+            }
+            .cmd-janela, .navegador-container {
+                transform: scale(0.7);
+                transform-origin: center;
+            }
+        }
+
+    .carimbo-python {
+            border: 2px dashed #b30000;
+            color: #b30000;
+            font-family: 'Consolas', monospace;
+            font-size: 0.8rem;
+            font-weight: bold;
+            text-transform: uppercase;
+            padding: 2px 6px;
+            display: inline-block;
+            transform: rotate(-3deg);
+            margin-bottom: 12px;
+            letter-spacing: 1px;
+            border-radius: 3px;
+        }
+
+        .nota-manuscrita{color:#6b3d20;font-family:"Segoe Print",cursive;font-size:1rem;line-height:30px;margin-top:10px}
+        
+        .instrucao-texto {
+            position: absolute;
+            bottom: -60px; /* Ajustado para bater exatamente com o Dia 1 */
+            left: 0;
+            width: 100%;
+            text-align: center;
+            font-size: 1.2rem;
+            line-height: 1.5; /* Mantém a altura da linha idêntica */
+            margin: 0; /* Remove margens invisíveis do navegador */
+            padding: 0;
+            color: var(--cor-texto);
+            pointer-events: none; /* Impede que o texto atrapalhe cliques na imagem */
+        }
+
+        /* MOLDURA QUADRADA AZUL DO MANUAL (NOVO) */
+        .quadro-azul {
+            border: 3px solid #1a4cd6;
+            padding: 15px 25px;
+            text-align: center;
+            color: #1a4cd6;
+            font-weight: bold;
+            margin: 20px auto;
+            border-radius: 4px;
+            width: 85%;
+            background-color: rgba(26, 76, 214, 0.05);
+            box-sizing: border-box;
+            line-height: 1.5;
+            box-shadow: 4px 4px 0px rgba(26, 76, 214, 0.15);
+        }
+
+        .ranking-backdrop { 
+            display: none; 
+            position: fixed; 
+            top: 0; 
+            left: 0; 
+            width: 100vw; 
+            height: 100vh; 
+            background-color: rgba(0, 0, 0, 0.75); 
+            z-index: 500; 
+            justify-content: center; 
+            align-items: center; 
+        }
+        .ranking-iframe-janela {
+            width: 95%;
+            max-width: 900px;
+            height: 650px;
+            border: none;
+            border-radius: 8px;
+            box-shadow: 0 10px 35px rgba(0, 0, 0, 0.9);
+            z-index: 510;
+        }
+
+        /* REGRAS DE ESCALONAMENTO RESPONSIVO (EVITA DISTORÇÃO NO RANKING) */
+        @media (max-height: 920px) { 
+            .cmd-janela, .navegador-container, .ranking-iframe-janela { transform: scale(0.85); transform-origin: center; } 
+        }
+        @media (max-height: 760px) { 
+            .cmd-janela, .navegador-container, .ranking-iframe-janela { transform: scale(0.7); transform-origin: center; } 
+        }
+
+    </style>
+</head>
+<body>
+
+    <!-- Centro: Imagem da Mesa de Trabalho -->
+    <div class="sala-container">
+        <img id="imagem-mesa" alt="Mesa de Trabalho" class="imagem-centralizada" />
+        
+        <!-- Hitboxes Interativas Invisíveis -->
+        <div id="hitbox-tela" class="hitbox" onclick="clicarTela()"></div>
+        <div id="hitbox-arquivos" class="hitbox" onclick="clicarArquivos()"></div>
+        <div id="hitbox-manual" class="hitbox" onclick="clicarManual()"></div>
+        <div id="hitbox-chamados" class="hitbox" onclick="clicarChamados()"></div>
+
+        <!-- Luz Decorativa de Chamado (Inicia Apagada) -->
+        <div id="luz-telefone"></div>
+
+        <!-- TEXTO COLOCADO AQUI DENTRO (Ele não vai empurrar a imagem) -->
+        <div class="instrucao-texto">
+            Explore um pouco e veja o que encontra.
+        </div>
+    </div>
+
+    <!-- JANELA FLUTUANTE DE ARQUIVOS (ACESSO RESTRITO) -->
+    <div class="arquivos-backdrop" id="arquivos-backdrop" onclick="fecharArquivos()">
+        <div class="terminal-box" onclick="event.stopPropagation()">
+            <div class="titulo-alerta">ACESSO RESTRITO</div>
+            <div class="mensagem-alerta">
+                Você ainda não pode mexer nos arquivos.
+            </div>
+        </div>
+    </div>
+
+    <!-- MANUAL (Roteiro e Histórias atualizados com notas e conceitos Python) -->
+    <div class="manual-backdrop" id="manual-backdrop" onclick="fecharTudo()"></div>
+    <div class="manual-wrapper-posicao" id="manual-wrapper" onclick="focarManual()">
+        <div class="caderno-moldura" id="caderno" onclick="cliqueNoCaderno(event)">
+            
+            <!-- PÁGINA 0: Intro Dia 0 (A ÚNICA QUE DEVE EXISTIR NESTE ARQUIVO) -->
+            <div class="pagina ativa">
+                <div class="carimbo-python">SINTAXE OFICIAL: PYTHON 3</div>
+                <div class="titulo-pagina">MANUAL DOS ESTAGIÁRIOS</div>
+                Se você está lendo isso, provavelmente acabou de entrar no TI.<br><br>
+                Primeira regra:<br>
+                <span class="regra-destaque">não entre em pânico.</span><br><br>
+                Segunda regra:<br>
+                <span class="regra-destaque">leia o chamado antes de mexer em qualquer coisa.</span><br><br>
+                Terceira regra:<br>
+                <span class="regra-destaque">se não souber o que fazer, procure primeiro.</span><br><br>
+                
+                <div class="nota-manuscrita">
+                    "Anotação: O terminal aceita letras maiúsculas e minúsculas com tolerância de espaço para facilitar, mas o interpretador Python real na internet é bem rígido!"
+                </div>
+                
+                <!-- Adicionei margin-top aqui para empurrar a caixa para baixo -->
+                <div class="quadro-azul" style="margin-top: 90px; color: #1a1a1a;">
+                    Novas páginas serão adicionadas conforme você avança pelos dias de treinamento.<br><br>
+                    
+                    <!-- O span isola apenas essas duas linhas para ficarem na cor azul -->
+                    <span style="color: #1a4cd6;">
+                        Canto direito: avançar para a próxima página →<br>
+                        ← Canto esquerdo: voltar para a página anterior
+                    </span><br><br>
+                    
+                    Consulte o manual sempre que precisar.
+                </div>
+                
+            </div>
+
+        </div>
+    </div>
+
+            <!-- PÁGINA 2 (INDEX 1): Primeiro Comando / print -->
+            <div class="pagina">
+                <div class="carimbo-python">COMANDO: print()</div>
+                <div class="titulo-pagina">MANUAL — PÁGINA 1</div>
+                <div class="subtitulo-pagina">PRIMEIRA REGRA</div>
+                <span class="regra-destaque">"Não entre em pânico."</span><br><br>
+                Se você não sabe como resolver alguma coisa, não tente adivinhar. Leia o problema. Entenda o que está sendo pedido. Procure a informação necessária. Só então tente resolver.<br><br>
+                <div class="subtitulo-pagina">print()</div>
+                O comando print() serve para mostrar uma informação na tela.<br><br>
+                Exemplos refinados:<br>
+                print("Olá, mundo!") → Texto na tela: Olá, mundo!<br>
+                print(100) → Número na tela: 100<br><br>
+                <div class="nota-manuscrita">
+                    "Anotação rápida: Textos para exibir sempre precisam de aspas duplas (\\\"\\\") ou simples (\\'). Mas se for apenas números, pode colocar direto nos parênteses!"
+                </div>
+                <br>
+                <strong>Referência rápida:</strong><br>
+                Comando: print() | Função: mostrar uma informação
+            </div>
+
+            <!-- PÁGINA 3 (INDEX 2): input -->
+            <div class="pagina">
+                <div class="carimbo-python">COMANDO: input()</div>
+                <div class="titulo-pagina">MANUAL — PÁGINA 2</div>
+                <div class="subtitulo-pagina">O COMPUTADOR TAMBÉM PODE PERGUNTAR</div>
+                O comando input() permite que o programa receba uma informação.<br>
+                Ele também pode apresentar uma pergunta antes de esperar a resposta.<br><br>
+                Exemplo:<br>
+                input("Qual é o seu nome? ")<br><br>
+                O computador mostra:<br>
+                Qual é o seu nome?<br>
+                E espera que alguém digite uma resposta.<br><br>
+                <div class="nota-manuscrita">
+                    "Anote aí: se o computador fala com o print(), ele escuta e recebe com o input()!"
+                </div>
+                <br>
+                <strong>Referência rápida:</strong><br>
+                print() → mostrar | input() → perguntar/receber
+            </div>
+
+            <!-- PÁGINA 4 (INDEX 3): Variáveis -->
+            <div class="pagina">
+                <div class="carimbo-python">CONCEITO: VARIÁVEIS</div>
+                <div class="titulo-pagina">MANUAL — PÁGINA 3</div>
+                <div class="subtitulo-pagina">VARIÁVEIS</div>
+                Uma variável é um espaço utilizado pelo programa para guardar uma informação.<br><br>
+                Imagine uma caixa rotulada:<br>
+                usuario<br>
+                ┌──────────────────────┐<br>
+                │ Rafael Mendes        │<br>
+                └──────────────────────┘<br><br>
+                Podemos guardar uma informação:<br>
+                usuario = "Rafael Mendes"<br><br>
+                E depois recuperar:<br>
+                print(usuario)<br><br>
+                <div class="nota-manuscrita">
+                    "Dica: O nome da variável é como a etiqueta da caixa (usuario). O valor armazenado dentro dela (Rafael Mendes) pode mudar a qualquer momento."
+                </div>
+            </div>
+
+            <!-- PÁGINA 5 (INDEX 4): Booleanos -->
+            <div class="pagina">
+                <div class="carimbo-python">TIPO: BOOLEANO (TRUE / FALSE)</div>
+                <div class="titulo-pagina">MANUAL — PÁGINA 4</div>
+                <div class="subtitulo-pagina">TRUE E FALSE</div>
+                Algumas informações representam apenas duas possibilidades.<br>
+                Ligado ou desligado. Ativo ou inativo. Conectado ou desconectado.<br><br>
+                Em Python representamos isso usando:<br>
+                <span class="regra-destaque">True</span> e <span class="regra-destaque">False</span><br><br>
+                Exemplo:<br>
+                computador_ligado = True (Computador está ligado)<br>
+                computador_ligado = False (Computador está desligado)<br><br>
+                <div class="nota-manuscrita">
+                    "Atenção! No Python, True e False devem obrigatoriamente começar com letra MAIÚSCULA. Escrever 'true' ou 'false' minúsculo causará erro de sintaxe."
+                </div>
+            </div>
+
+            <!-- PÁGINA 6 (INDEX 5): if/else -->
+            <div class="pagina">
+                <div class="carimbo-python">ESTRUTURA: TOMADA DE DECISÃO</div>
+                <div class="titulo-pagina">MANUAL — PÁGINA 5</div>
+                <div class="subtitulo-pagina">FAZENDO O COMPUTADOR DECIDIR</div>
+                Agora podemos fazer o computador escolher uma ação dependendo de uma condição.<br><br>
+                <span class="regra-destaque">if</span> → significa "se" (if computador_ligado:)<br>
+                <span class="regra-destaque">else</span> → significa "caso contrário" (else:)<br><br>
+                <div class="nota-manuscrita">
+                    "Regra 1: O sinal de '=' serve para ATRIBUIR (guardar) valores. Para COMPARAR se algo é igual, você deve usar '==' dentro do if."
+                </div>
+                <div class="nota-manuscrita">
+                    "Regra 2 (Condição Oculta): Escrever 'if computador_ligado:' já é o bastante! Como a variável já guarda True ou False, o Python sabe interpretá-la diretamente. Usar '== True' é redundante!"
+                </div>
+                <br>
+                <strong>Tabela de Sintaxe:</strong><br>
+                • <span class="regra-destaque">if</span> : significa "se"<br>
+                • <span class="regra-destaque">else</span> : significa "caso contrário"<br>
+                • <span class="regra-destaque">:</span> : (Dois-pontos) obrigatório no fim da condição para abrir o bloco de comandos!
+            </div>
+
+        </div>
+    </div>
+
+    <!-- ========================================================= -->
+    <!-- MODAL INTEGRADO DO SIMULADOR DE CHAMADOS                   -->
+    <!-- ========================================================= -->
+    <div class="chamados-backdrop" id="chamados-backdrop" onclick="fecharChamados()">
+        <div class="navegador-container" onclick="event.stopPropagation()">
+            
+            <!-- Topo do Navegador -->
+            <div class="navegador-topo">
+                <div class="botoes-janela">
+                    <div class="botao-janela-circulo"></div>
+                    <div class="botao-janela-circulo"></div>
+                    <div class="botao-janela-circulo"></div>
+                </div>
+                <div class="barra-endereco">
+                    <span class="protocolo-seguro">HTTPS://</span> intranet.semae.gov.br/chamados
+                </div>
+                <!-- AJUSTE SOLICITADO: Botão X no canto direito -->
+                <div class="botao-fechar-x" onclick="fecharChamados()">X</div>
+            </div>
+
+            <!-- Conteúdo do Navegador (800px de altura) -->
+            <div class="conteudo-web">
+                
+                <!-- Barra Lateral de Chamados (Abas) -->
+                <div class="sidebar-chamados">
+                    <div class="sidebar-titulo">Atendimentos</div>
+                    <div class="lista-chamados" id="sidebar-lista">
+                        <div style="padding: 25px; text-align: center; font-size: 0.8rem; color: #556a75; font-style: italic; line-height: 1.5;">
+                            Nenhum chamado pendente...
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Painel de Detalhes Principal -->
+                <div class="painel-principal">
+                    
+                    <!-- TELA DE BOAS VINDAS (Texto Simplificado com Letras Grandes) -->
+                    <div class="tela-boas-vindas">
+                        <div class="caixa-titulo-sistema" style="font-size: 1.8rem; padding: 15px 40px; margin-bottom: 30px;">SISTEMA DE CHAMADOS</div>
+                        
+                        <div class="descricao-sistema" style="font-size: 1.2rem; max-width: 700px; line-height: 1.6; margin-bottom: 40px; color: #ffffff;">
+                            Bem-vindo ao sistema de atendimento do TI.<br>
+                            Aqui serão encaminhadas as solicitações dos usuários de todos os setores.
+                        </div>
+
+                        <!-- Campos explicativos com textos essenciais e letras grandes -->
+                        <div class="campos-explicacao" style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; text-align: left; max-width: 800px; margin-bottom: 50px; font-size: 1.1rem;">
+                            <div class="campo-info" style="border: 1px solid var(--cor-borda); padding: 18px; border-radius: 4px; background-color: rgba(30, 53, 64, 0.05); line-height: 1.5;">
+                                <strong style="color: var(--cor-destaque); font-size: 1.25rem; display: block; margin-bottom: 8px;">Número</strong>
+                                Identificação única do atendimento no padrão SE-CTI.
+                            </div>
+                            <div class="campo-info" style="border: 1px solid var(--cor-borda); padding: 18px; border-radius: 4px; background-color: rgba(30, 53, 64, 0.05); line-height: 1.5;">
+                                <strong style="color: var(--cor-destaque); font-size: 1.25rem; display: block; margin-bottom: 8px;">Solicitante</strong>
+                                Pessoa que relatou o comportamento ou problema.
+                            </div>
+                            <div class="campo-info" style="border: 1px solid var(--cor-borda); padding: 18px; border-radius: 4px; background-color: rgba(30, 53, 64, 0.05); line-height: 1.5;">
+                                <strong style="color: var(--cor-destaque); font-size: 1.25rem; display: block; margin-bottom: 8px;">Setor</strong>
+                                Localidade física ou departamento de origem.
+                            </div>
+                            <div class="campo-info" style="border: 1px solid var(--cor-borda); padding: 18px; border-radius: 4px; background-color: rgba(30, 53, 64, 0.05); line-height: 1.5;">
+                                <strong style="color: var(--cor-destaque); font-size: 1.25rem; display: block; margin-bottom: 8px;">Histórico/Encaminhamento</strong>
+                                Relato detalhado e orientações da supervisão.
+                            </div>
+                        </div>
+
+                        <div class="alerta-vazio" style="border: 1px dashed var(--cor-borda); padding: 25px 40px; background-color: rgba(30, 53, 64, 0.1); border-radius: 4px; max-width: 500px; text-align: center;">
+                            <p style="color: var(--cor-destaque); font-weight: bold; margin: 0 0 8px 0; font-size: 1.3rem; letter-spacing: 1px;">NENHUM CHAMADO DISPONÍVEL</p>
+                            <p style="font-size: 1.05rem; margin: 0; color: #8da1ad;">Aguarde o recebimento de novas solicitações na barra lateral.</p>
+                        </div>
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+    </div>
+
+    <!-- JANELA FLUTUANTE DO MONITOR (TELA DO COMPUTADOR - CMD INTERATIVO) -->
+    <div class="tela-backdrop" id="tela-backdrop" onclick="fecharTudo()">
+        <div class="cmd-janela" onclick="event.stopPropagation(); focarTela();">
+            
+            <!-- Barra de Título -->
+            <div class="cmd-titulo-barra">
+                <div class="cmd-titulo-texto">
+                    <div class="cmd-icone-simulado"></div>
+                    <span>Prompt de Comando - semae.exe [Estação: ATD-07]</span>
+                </div>
+                <div class="cmd-controles-janela">
+                    <span>—</span>
+                    <span>❑</span>
+                    <span class="botao-fechar-cmd" onclick="fecharTela()">✕</span>
+                </div>
+            </div>
+
+            <!-- Corpo do Terminal -->
+            <div class="cmd-corpo" id="terminal-foco">
+                
+                <!-- Linhas impressas no console (Histórico) -->
+                <div class="historico-terminal" id="historico-linhas">
+                    <div>Microsoft Windows [versão 10.0.19045]
+(c) Microsoft Corporation. Todos os direitos reservados.
+
+=======================================================
+               TERMINAL OPERACIONAL SEMAE
+=======================================================</div>
+                    
+                    <!-- Texto exato em laranja e com letras normais -->
+                    <div class="mensagem-inativa">Nenhum atendimento iniciado. Verifique seus chamados.</div>
+                </div>
+
+                <!-- Entrada ativa (Prompt de digitação) -->
+                <div class="linha-input">
+                    <span class="prompt-simbolo">C:\SEMAE\ATD-07&gt;</span>
+                    <input type="text" id="prompt-input" class="campo-entrada" autocomplete="off">
+                </div>
+
+            </div>
+
+        </div>
+    </div>
+
+    <!-- LÓGICA DE TRANSIÇÃO (DIA 0 -> DIA 1) -->
+    <script>
+
+        // DETECTOR HÍBRIDO DE CAMINHO DE IMAGENS (Mesa 1 ou Mesa 2)
+        const imgMesa = document.getElementById('imagem-mesa');
+        if (imgMesa) {
+            const baseCaminho = window.location.protocol === 'file:' ? '' : '/static/pi2/';
+            const nomeEstagiarioCheck = (localStorage.getItem('nomeEstagiario') || 'Estagiário').toUpperCase();
+            if (localStorage.getItem(nomeEstagiarioCheck + '_conquistaAranha') === 'true') {
+                imgMesa.src = baseCaminho + 'mesa2.png';
+            } else {
+                imgMesa.src = baseCaminho + 'mesa.png';
+            }
+        }
+
+
+        let chamadoAtivo = false; 
+        let primeiraVisitaRealizada = false; 
+        let chamadosAberto = false;  
+
+        /* --- CONTROLE DO MONITOR (TELA) --- */
+        function clicarTela() {
+            // Fechar arquivos e chamados se o monitor for aberto
+            fecharArquivos();
+            fecharChamados();
+
+            const telaBackdrop = document.getElementById('tela-backdrop');
+            const manualWrapper = document.getElementById('manual-wrapper');
+            
+            if (manualWrapper.style.display === 'block') {
+                telaBackdrop.style.backgroundColor = 'transparent';
+                telaBackdrop.style.pointerEvents = 'none'; 
+                focarTela(); 
+            } else {
+                telaBackdrop.style.backgroundColor = 'rgba(0, 0, 0, 0.75)';
+                telaBackdrop.style.pointerEvents = 'auto';
+                telaBackdrop.style.zIndex = '460'; 
+            }
+
+            telaBackdrop.style.display = 'flex';
+            
+            setTimeout(function() {
+                document.getElementById('prompt-input').focus();
+            }, 50);
+        }
+
+        function fecharTela() {
+            const telaBackdrop = document.getElementById('tela-backdrop');
+            telaBackdrop.style.display = 'none';
+            telaBackdrop.style.backgroundColor = 'rgba(0, 0, 0, 0.75)'; 
+            telaBackdrop.style.pointerEvents = 'auto'; 
+        }
+
+        function focarTela() {
+            document.getElementById('tela-backdrop').style.zIndex = '480';  
+            document.getElementById('manual-wrapper').style.zIndex = '450'; 
+        }
+
+        function focarManual() {
+            document.getElementById('manual-wrapper').style.zIndex = '490';  
+            document.getElementById('tela-backdrop').style.zIndex = '450';   
+        }
+
+        /* --- FECHAMENTO UNIFICADO (CLICAR FORA NO PRETO) --- */
+        function fecharTudo() { fecharTela(); fecharManual(); fecharArquivos(); fecharChamados(); fecharRanking(); }
+
+
+        /* --- CONTROLE DO TELEFONE / CHAMADOS --- */
+        function clicarChamados() {
+            // Se o chamado estiver ativo (telefone tocando), vai para o Dia 1 de forma híbrida
+            if (chamadoAtivo) {
+                if (window.location.protocol === 'file:') {
+                    window.location.href = "dia_1.html"; 
+                } else {
+                    window.location.href = "/pi2/dia1"; 
+                }
+                return;
+            }
+
+            // Marca que a janela de chamados está oficialmente aberta em foco
+            chamadosAberto = true; 
+
+            // Caso contrário, abre a tela informativa de chamados do Dia 0 normalmente
+            fecharTela();
+            fecharManual();
+            document.getElementById('chamados-backdrop').style.display = 'flex';
+        }
+
+        function fecharChamados() {
+            document.getElementById('chamados-backdrop').style.display = 'none';
+
+            // Só ativa o gatilho da luz se o jogador de fato abriu e fechou a janela de chamados
+            if (chamadosAberto && !primeiraVisitaRealizada) {
+                primeiraVisitaRealizada = true;
+                setTimeout(function() {
+                    acenderLuzChamado();
+                }, 2000); // 2 segundos para acender o pisca-pisca
+            }
+            
+            // Reseta o estado de foco
+            chamadosAberto = false; 
+        }
+
+        function acenderLuzChamado() {
+            chamadoAtivo = true;
+            document.getElementById('luz-telefone').classList.add('ativa');
+        }
+
+        /* --- CONTROLE DA JANELA DE ARQUIVOS --- */
+        function clicarArquivos() {
+            // Ao abrir arquivos, encerra os estados das outras janelas
+            fecharTela();
+            fecharManual();
+            document.getElementById('arquivos-backdrop').style.display = 'flex';
+        }
+
+        function fecharArquivos() {
+            document.getElementById('arquivos-backdrop').style.display = 'none';
+        }
+
+        /* --- CONTROLE DO MANUAL --- */
+        let paginaAtual = 0;
+        let paginasLiberadas = 1; 
+        let travado = false;
+
+        function clicarManual() {
+            // Fechar arquivos e chamados se o manual for aberto
+            fecharArquivos();
+            fecharChamados();
+
+            const manualBackdrop = document.getElementById('manual-backdrop');
+            const manualWrapper = document.getElementById('manual-wrapper');
+            const telaBackdrop = document.getElementById('tela-backdrop');
+
+            manualBackdrop.style.display = 'block';
+            manualWrapper.style.display = 'block';
+            paginaAtual = 0;
+            travado = false;
+            resetarPaginas();
+
+            if (telaBackdrop.style.display === 'flex') {
+                telaBackdrop.style.backgroundColor = 'transparent';
+                telaBackdrop.style.pointerEvents = 'none';
+                focarTela(); 
+            } else {
+                manualWrapper.style.zIndex = '450'; 
+            }
+        }
+
+        function fecharManual() {
+            document.getElementById('manual-backdrop').style.display = 'none';
+            document.getElementById('manual-wrapper').style.display = 'none';
+        }
+
+        function abrirManualNaUltimaPagina() {
+            fecharTela(); 
+            fecharArquivos(); 
+            fecharChamados();
+
+            const manualBackdrop = document.getElementById('manual-backdrop');
+            const manualWrapper = document.getElementById('manual-wrapper');
+            manualBackdrop.style.display = 'block'; 
+            manualWrapper.style.display = 'block';
+
+            const paginas = document.querySelectorAll('#caderno .pagina');
+            
+            // Calcula qual a última página liberada com base na variável "paginasLiberadas"
+            let maxIndex = paginasLiberadas - 1;
+            if (maxIndex >= paginas.length) maxIndex = paginas.length - 1;
+            if (maxIndex < 0) maxIndex = 0;
+            
+            paginaAtual = maxIndex;
+            travado = false;
+
+            paginas.forEach((pag, index) => {
+                pag.className = 'pagina';
+                if (index === paginaAtual) pag.classList.add('ativa');
+            });
+
+            manualWrapper.style.zIndex = '490';
+        }
+
+        function resetarPaginas() {
+            const paginas = document.querySelectorAll('#caderno .pagina');
+            paginas.forEach((pag, index) => {
+                pag.className = 'pagina';
+                if (index === 0) pag.classList.add('ativa');
+            });
+        }
+
+        function cliqueNoCaderno(event) {
+            const wrapper = document.getElementById('manual-wrapper');
+            const telaBackdrop = document.getElementById('tela-backdrop');
+
+            if (telaBackdrop.style.display === 'flex' && wrapper.style.zIndex !== '490') {
+                focarManual(); 
+                return;        
+            }
+
+            const caderno = document.getElementById('caderno');
+            const rect = caderno.getBoundingClientRect();
+            const x = event.clientX - rect.left;
+
+            if (x > rect.width / 2) {
+                mudarPagina(1);
+            } else {
+                mudarPagina(-1);
+            }
+        }
+
+        async function mudarPagina(direcao) {
+            if (travado) return;
+
+            const paginas = document.querySelectorAll('#caderno .pagina');
+            const totalPaginas = paginas.length;
+            const novaPaginaIndex = paginaAtual + direcao;
+
+            if (novaPaginaIndex < 0 || novaPaginaIndex >= totalPaginas) return;
+
+            travado = true;
+
+            const paginaSaindo = paginas[paginaAtual];
+            const paginaEntrando = paginas[novaPaginaIndex];
+
+            if (direcao === 1) {
+                paginaEntrando.classList.add('atras');
+                paginaSaindo.classList.add('dobrando');
+                await sleep(250);
+
+                paginaSaindo.classList.remove('ativa');
+                paginaSaindo.classList.add('saindo');
+                await sleep(600);
+
+                paginaSaindo.classList.remove('dobrando', 'saindo');
+                paginaEntrando.classList.remove('atras');
+                paginaEntrando.classList.add('ativa');
+            } else {
+                paginaEntrando.classList.add('voltando');
+                paginaEntrando.offsetHeight;
+
+                paginaEntrando.classList.remove('voltando');
+                paginaEntrando.classList.add('ativa');
+                await sleep(600);
+
+                paginaSaindo.classList.remove('ativa');
+            }
+
+            paginaAtual = novaPaginaIndex;
+            travado = false;
+        }
+
+        function sleep(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        }
+
+        /* --- SCRIPT DE INTERAÇÃO DO TERMINAL CMD --- */
+        const terminalInput = document.getElementById('prompt-input');
+        const terminalHistorico = document.getElementById('historico-linhas');
+        const terminalFocoArea = document.getElementById('terminal-foco');
+
+        terminalFocoArea.addEventListener('click', function() {
+            terminalInput.focus();
+        });
+
+        function normalizarTexto(txt) {
+            if (!txt) return "";
+            return txt
+                .toLowerCase()
+                .trim()
+                .normalize("NFD")
+                .replace(/[\u0300-\u036f]/g, "") // Remove acentos (diacríticos)
+                .replace(/\s+/g, " ")            // Múltiplos espaços viram um único espaço
+                .replace(/[?!.]$/, "")           // Remove interrogação ou ponto no final do texto
+                .trim();
+        }
+
+        function normalizarCodigo(txt) {
+            if (!txt) return "";
+            // Remove espaços e acentos de códigos Python para validar igualdade estrutural
+            return normalizarTexto(txt).replace(/\s+/g, "");
+        }
+
+        function abrirRanking() {
+            fecharTudo();
+            if (window.location.protocol === 'file:') {
+                window.open('ranking.html', '_blank');
+            } else {
+                document.getElementById('ranking-backdrop').style.display = 'flex';
+            }
+        }
+        function fecharRanking() {
+            document.getElementById('ranking-backdrop').style.display = 'none';
+        }
+        
+        // CORREÇÃO DO BUG CRÍTICO DO HISTÓRICO DO TERMINAL
+        function rolarParaBaixo() {
+            const c = document.getElementById('historico-linhas');
+            if (c) c.scrollTop = c.scrollHeight;
+        }
+
+
+
+
+
+
+
+        terminalInput.addEventListener('keypress', async function(e) {
+            if (e.key === 'Enter') {
+                const cmdBruto = this.value;
+                const cmdLimpo = cmdBruto.trim().toLowerCase();
+                if (cmdBruto.length === 0) return;
+
+                // 1. COMANDO RANKING (Funciona sempre)
+                if (cmdLimpo === 'ranking') {
+                    abrirRanking();
+                    this.value = "";
+                    return;
+                }
+
+                // 2. COMANDO RESET (Funciona sempre)
+                if (cmdLimpo === 'reset' || cmdLimpo === 'reset-conquistas') {
+                    const nome = (localStorage.getItem('nomeEstagiario') || 'Estagiário').toUpperCase();
+                    localStorage.removeItem(nome + '_conquistaAranha');
+                    location.reload();
+                    return;
+                }
+
+                // 3. SE DIGITAR QUALQUER OUTRA COISA, INFORMA QUE NÃO HÁ ATENDIMENTOS (Igual ao Dia 1)
+                const divCmd = document.createElement('div');
+                divCmd.innerHTML = `C:\\SEMAE\\ATD-07&gt; <span style="color:#fff;">${cmdBruto}</span>`;
+                terminalHistorico.appendChild(divCmd);
+                
+                const divMsg = document.createElement('div');
+                divMsg.className = "mensagem-inativa";
+                divMsg.style.marginTop = "15px";
+                divMsg.style.marginBottom = "15px";
+                divMsg.innerText = "Nenhum atendimento iniciado. Verifique seus chamados.";
+                terminalHistorico.appendChild(divMsg);
+                
+                this.value = "";
+                rolarParaBaixo();
+            }
+        });
+    </script>
+
+    <!-- MODAL DO RANKING (IFRAME) -->
+    <div class="ranking-backdrop" id="ranking-backdrop" onclick="fecharRanking()">
+        <div style="position: relative; display: flex; flex-direction: column; align-items: center;" onclick="event.stopPropagation()">
+            <!-- Este botão é controlado diretamente pelo jogo pai, burlado 100% dos bloqueios de segurança -->
+            <button onclick="fecharRanking()" style="position: absolute; top: -45px; right: 0; background: #121f27; border: 2px solid var(--cor-texto); color: var(--cor-texto); font-family: 'Consolas', monospace; font-weight: bold; font-size: 1rem; padding: 6px 16px; cursor: pointer; border-radius: 4px; transition: 0.15s; outline: none;">FECHAR [X]</button>
+            <iframe src="ranking.html" class="ranking-iframe-janela"></iframe>
+        </div>
+    </div>
+
+
+</body>
+</html>

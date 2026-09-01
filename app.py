@@ -119,6 +119,40 @@ def admin_zmtx_page():
         return redirect(url_for('login_page'))
     return render_template('arquivos.html')
 
+# =====================================================================
+# ROTAS INTEGRADAS DO JOGO DO ESTAGIÁRIO (SEMAE - PI2)
+# =====================================================================
+
+@app.route('/pi2')
+def semae_index_page():
+    # Rota raiz do jogo: Abre o index.html para digitar o nome
+    token = request.cookies.get('jwt_token')
+    if not token or not validate_token(token):
+        return redirect(url_for('login_page'))
+    return render_template('pi2/index.html')
+
+@app.route('/pi2/mesa')
+def semae_mesa_page():
+    # Rota da Mesa: Abre o mesa.html de forma segura após o login do jogo
+    token = request.cookies.get('jwt_token')
+    if not token or not validate_token(token):
+        return redirect(url_for('login_page'))
+    return render_template('pi2/mesa.html')
+
+@app.route('/pi2/dia1')
+def semae_dia1_page():
+    token = request.cookies.get('jwt_token')
+    if not token or not validate_token(token):
+        return redirect(url_for('login_page'))
+    return render_template('pi2/dia_1.html')
+
+@app.route('/pi2/ranking')
+def semae_ranking_page():
+    token = request.cookies.get('jwt_token')
+    if not token or not validate_token(token):
+        return redirect(url_for('login_page'))
+    return render_template('pi2/ranking.html')
+
 @app.route('/logout')
 def logout():
     response = make_response(redirect(url_for('login_page')))
@@ -349,6 +383,7 @@ def init_db():
 
     try:
         cur = conn.cursor()
+        # Cria tabela users se não existir
         cur.execute("""
             CREATE TABLE IF NOT EXISTS users (
                 id SERIAL PRIMARY KEY,
@@ -358,13 +393,26 @@ def init_db():
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
         """)
+        
+        # CRIA TABELA ISOLADA SEMAE_RANKING
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS semae_ranking (
+                id SERIAL PRIMARY KEY,
+                user_id INTEGER UNIQUE REFERENCES users(id) ON DELETE CASCADE,
+                username VARCHAR(50) NOT NULL,
+                estrelas INTEGER DEFAULT 0,
+                conquista_aranha BOOLEAN DEFAULT FALSE,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+        """)
+        
         conn.commit()
         cur.close()
         conn.close()
-        return jsonify({"message": "Banco de dados inicializado."}), 200
+        return jsonify({"message": "Banco de dados e tabela separada 'semae_ranking' inicializados com sucesso!"}), 200
     except psycopg2.Error as e:
         print(f"Erro ao inicializar DB: {e}")
-        return jsonify({"message": "Erro ao criar/verificar tabela no banco de dados."}), 500
+        return jsonify({"message": "Erro ao criar/verificar tabelas no banco de dados."}), 500
 
 @app.route('/api/register', methods=['POST'])
 def register_user():
@@ -571,6 +619,84 @@ def serve_mago_media(filename):
         print(f"Erro ao buscar imagem do mago: {e}")
         
     raise NotFound()
+
+# =====================================================================
+# ROTAS DE API DA TABELA SEPARADA (SEMAE_RANKING)
+# =====================================================================
+
+@app.route('/api/save-score', methods=['POST'])
+def save_score():
+    token = request.cookies.get('jwt_token')
+    payload = validate_token(token)
+    if not payload:
+        return jsonify({"message": "Não autorizado."}), 401
+        
+    data = request.get_json() or {}
+    estrelas = data.get('estrelas', 0)
+    conquista_aranha = data.get('conquista_aranha', False)
+    
+    user_id = payload['user_id']
+    username = payload['username']
+    
+    conn = get_db_connection()
+    if not conn:
+        return jsonify({"message": "Erro de conexão com o banco."}), 500
+        
+    try:
+        cur = conn.cursor()
+        cur.execute("""
+            INSERT INTO semae_ranking (user_id, username, estrelas, conquista_aranha)
+            VALUES (%s, %s, %s, %s)
+            ON CONFLICT (user_id) 
+            DO UPDATE SET 
+                estrelas = GREATEST(semae_ranking.estrelas, EXCLUDED.estrelas),
+                conquista_aranha = semae_ranking.conquista_aranha OR EXCLUDED.conquista_aranha,
+                updated_at = CURRENT_TIMESTAMP
+        """, (user_id, username, estrelas, conquista_aranha))
+        
+        conn.commit()
+        cur.close()
+        conn.close()
+        return jsonify({"message": "Pontuação salva com sucesso no banco de dados!"}), 200
+    except Exception as e:
+        print(f"Erro ao salvar pontuação: {e}")
+        return jsonify({"message": "Erro interno ao salvar pontuação."}), 500
+
+@app.route('/api/get-ranking', methods=['GET'])
+def get_ranking():
+    token = request.cookies.get('jwt_token')
+    if not validate_token(token):
+        return jsonify({"message": "Não autorizado."}), 401
+        
+    conn = get_db_connection()
+    if not conn:
+        return jsonify({"message": "Erro de conexão com o banco de dados."}), 500
+        
+    try:
+        cur = conn.cursor()
+        cur.execute("""
+            SELECT id, username, estrelas, conquista_aranha 
+            FROM semae_ranking 
+            WHERE estrelas > 0 
+            ORDER BY estrelas DESC, conquista_aranha DESC, updated_at DESC
+            LIMIT 50
+        """)
+        users = cur.fetchall()
+        cur.close()
+        conn.close()
+        
+        ranking_list = [{
+            "id": u[0],
+            "username": u[1],
+            "estrelas": u[2],
+            "conquista_aranha": u[3]
+        } for u in users]
+        
+        return jsonify(ranking_list), 200
+    except Exception as e:
+        print(f"Erro ao buscar ranking: {e}")
+        return jsonify({"message": "Erro interno ao carregar ranking."}), 500
+
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)

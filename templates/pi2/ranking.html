@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SEMAE - Quadro de Líderes do TI</title>
+    <style>
+        :root {
+            --cor-fundo: #000000;      
+            --cor-texto: #5FDCF2;      
+            --cor-destaque: #FF9F1C;   
+            --cor-sucesso: #45CF8A;    
+            --cor-erro: #FF3B30;       
+            --cor-borda: #1e3540;
+            --cor-fundo-navegador: #0d161b;
+            --cor-fundo-painel: #050a0d;
+        }
+
+        body {
+            background-color: var(--cor-fundo);
+            color: var(--cor-texto);
+            font-family: 'Consolas', 'SF Mono', 'DejaVu Sans Mono', monospace;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 10px;
+            box-sizing: border-box;
+        }
+
+        .ranking-container {
+            width: 100%;
+            max-width: 900px;
+            background-color: var(--cor-fundo-navegador);
+            border: 2px solid var(--cor-borda);
+            border-radius: 8px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .ranking-topo {
+            background-color: #121f27;
+            padding: 12px 18px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 2px solid var(--cor-borda);
+        }
+
+        .ranking-topo-titulo {
+            font-size: 0.9rem;
+            color: #a0b2be;
+            font-weight: bold;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        .botoes-decorativos {
+            display: flex;
+            gap: 6px;
+        }
+
+        .botao-circulo {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background-color: var(--cor-borda);
+        }
+
+        .ranking-corpo {
+            background-color: var(--cor-fundo-painel);
+            padding: 30px 40px;
+            box-sizing: border-box;
+        }
+
+        .titulo-principal {
+            text-align: center;
+            color: var(--cor-destaque);
+            font-size: 1.8rem;
+            font-weight: bold;
+            letter-spacing: 2px;
+            margin-bottom: 30px; 
+            text-transform: uppercase;
+            padding-bottom: 0px;
+        }
+
+        .tabela-wrapper {
+            max-height: 350px; 
+            overflow-y: auto; 
+            margin-bottom: 30px;
+            border: 1px solid rgba(30, 53, 64, 0.4);
+            border-radius: 4px;
+            background-color: rgba(0, 0, 0, 0.2);
+            padding-right: 5px;
+        }
+
+        .tabela-wrapper::-webkit-scrollbar {
+            width: 8px;
+        }
+        .tabela-wrapper::-webkit-scrollbar-track {
+            background: var(--cor-fundo-painel);
+        }
+        .tabela-wrapper::-webkit-scrollbar-thumb {
+            background: var(--cor-borda);
+            border-radius: 4px;
+        }
+        .tabela-wrapper::-webkit-scrollbar-thumb:hover {
+            background: var(--cor-texto);
+        }
+
+        .tabela-ranking {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 1.1rem;
+        }
+
+        .tabela-ranking th {
+            border-bottom: 2px solid var(--cor-texto);
+            color: var(--cor-texto);
+            text-align: left;
+            padding: 12px 8px;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            position: sticky; 
+            top: 0;
+            background-color: var(--cor-fundo-painel);
+            z-index: 10;
+        }
+
+        .tabela-ranking td {
+            padding: 14px 8px;
+            border-bottom: 1px solid rgba(30, 53, 64, 0.4);
+            color: #ffffff;
+        }
+
+        .posicao-destaque-1 { color: var(--cor-destaque) !important; font-weight: bold; }
+        .posicao-destaque-2 { color: #e1d3b0 !important; font-weight: bold; } 
+        .posicao-destaque-3 { color: #b77033 !important; font-weight: bold; } 
+
+        .estrelas-progresso {
+            color: var(--cor-destaque);
+            letter-spacing: 2px;
+            font-size: 1.2rem;
+            display: inline-block;
+            vertical-align: middle;
+        }
+
+        .estrela-aranha-branca {
+            color: #ffffff !important;
+            font-size: 1.2rem !important; 
+            letter-spacing: 2px;
+            display: inline-block;
+            vertical-align: middle;
+            filter: drop-shadow(0 0 3px #ffffff);
+        }
+
+        .estrelas-vazias {
+            color: #1e3540;
+            letter-spacing: 2px;
+            display: inline-block;
+            vertical-align: middle;
+        }
+
+        .tag-cargo {
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-weight: bold;
+            border: 1px solid;
+            display: inline-block;
+            letter-spacing: 1px;
+        }
+
+        .cargo-senior     { background-color: rgba(255, 46, 147, 0.12); color: #FF2E93; border-color: #FF2E93; box-shadow: 0 0 4px rgba(255, 46, 147, 0.2); } 
+        .cargo-pleno      { background-color: rgba(0, 240, 255, 0.12); color: #00F0FF; border-color: #00F0FF; box-shadow: 0 0 4px rgba(0, 240, 255, 0.2); }  
+        .cargo-junior     { background-color: rgba(157, 78, 221, 0.12); color: #9D4EDD; border-color: #9D4EDD; box-shadow: 0 0 4px rgba(157, 78, 221, 0.2); } 
+        .cargo-estagiario { background-color: rgba(57, 255, 20, 0.12); color: #39FF14; border-color: #39FF14; box-shadow: 0 0 4px rgba(57, 255, 20, 0.2); }   
+        .cargo-aprendiz   { background-color: rgba(255, 183, 3, 0.12); color: #FFB703; border-color: #FFB703; box-shadow: 0 0 4px rgba(255, 183, 3, 0.2); }   
+        
+        .cargo-aranha { 
+            background-color: rgba(255, 59, 48, 0.15); 
+            color: var(--cor-erro); 
+            border-color: var(--cor-erro);
+            box-shadow: 0 0 6px rgba(255, 59, 48, 0.4);
+        }
+
+        .ranking-acoes {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-top: 2px solid var(--cor-borda);
+            padding-top: 20px;
+        }
+
+        .btn-retro {
+            background: transparent;
+            color: var(--cor-texto);
+            border: 2px solid var(--cor-texto);
+            padding: 10px 20px;
+            font-family: inherit;
+            font-weight: bold;
+            cursor: pointer;
+            border-radius: 4px;
+            transition: 0.15s ease-in-out;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .btn-retro:hover {
+            background-color: var(--cor-texto);
+            color: #000000;
+        }
+
+        .btn-retro-destaque {
+            color: var(--cor-destaque);
+            border-color: var(--cor-destaque);
+        }
+
+        .btn-retro-destaque:hover {
+            background-color: var(--cor-destaque);
+            color: #000000;
+        }
+
+        .status-servidor {
+            font-size: 0.85rem;
+            color: var(--cor-sucesso);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .ponto-pisca {
+            width: 8px;
+            height: 8px;
+            background-color: var(--cor-sucesso);
+            border-radius: 50%;
+            animation: piscar 1s infinite ease-in-out;
+        }
+
+        @keyframes piscar {
+            0%, 100% { opacity: 0.2; }
+            50% { opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="ranking-container">
+        <div class="ranking-topo">
+            <div class="botoes-decorativos">
+                <div class="botao-circulo"></div>
+                <div class="botao-circulo"></div>
+                <div class="botao-circulo"></div>
+            </div>
+            <div class="ranking-topo-titulo">intranet.semae.gov.br / cti_ranking</div>
+            <div style="width: 40px;"></div>
+        </div>
+
+        <div class="ranking-corpo">
+            <div class="titulo-principal">Quadro de Desempenho do TI</div>
+
+            <div class="tabela-wrapper">
+                <table class="tabela-ranking">
+                    <thead>
+                        <tr>
+                            <th style="width: 8%;">Pos</th>
+                            <th style="width: 35%;">Estagiário</th>
+                            <th style="width: 27%;">Estrelas</th>
+                            <th style="width: 30%;">Classificação</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabela-corpo">
+                        <!-- Os dados reais do servidor serão inseridos aqui dinamicamente depois -->
+                        <tr>
+                            <td colspan="4" style="text-align: center; color: #8da1ad; font-style: italic; padding: 40px; font-size: 1rem;">
+                                Nenhum estagiário classificado no momento.<br>
+                                <span style="color: var(--cor-destaque); font-weight: bold; font-style: normal; display: inline-block; margin-top: 10px;">
+                                    [!] Aguardando sincronização com o servidor de ranqueamento...
+                                </span>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="ranking-acoes">
+                <!-- Comando de fechar via script nativo do iframe pai -->
+                <button class="btn-retro" onclick="voltarEscritorio()">&lt; Voltar para o Escritório</button>
+                
+                <div class="status-servidor">
+                    <div class="ponto-pisca"></div>
+                    CONECTADO AO SERVIDOR DE RANQUEAMENTO
+                </div>
+
+                <button class="btn-retro btn-retro-destaque" onclick="location.reload()">Atualizar</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function voltarEscritorio() {
+            if (window.self !== window.top) {
+                try {
+                    window.parent.fecharRanking();
+                } catch (e) {
+                    window.location.href = 'dia_1.html';
+                }
+            } else {
+                window.location.href = 'dia_1.html';
+            }
+        }
+
+        // BUSCA AUTOMÁTICA E DESENHO DINÂMICO DOS LÍDERES DO BANCO DE DADOS
+        async function carregarRanking() {
+            // Se estiver rodando localmente de forma estática, exibe os dados fictícios padrão da tela
+            if (window.location.protocol === 'file:') {
+                console.log("Rodando via arquivo local. Exibindo marcas de teste.");
+                return; 
+            }
+
+            const tbody = document.getElementById('tabela-corpo');
+            try {
+                const response = await fetch('/api/get-ranking');
+                if (!response.ok) throw new Error("Erro na conexão");
+                const dados = await response.json();
+
+                if (dados.length === 0) {
+                    tbody.innerHTML = `
+                        <tr>
+                            <td colspan="4" style="text-align: center; color: #8da1ad; font-style: italic; padding: 40px; font-size: 1rem;">
+                                Nenhum estagiário classificado no momento.
+                            </td>
+                        </tr>`;
+                    return;
+                }
+
+                tbody.innerHTML = ''; // Limpa a mensagem de carregamento inicial
+
+                dados.forEach((u, index) => {
+                    const pos = index + 1;
+                    let classePos = '';
+                    if (pos === 1) classePos = 'posicao-destaque-1';
+                    else if (pos === 2) classePos = 'posicao-destaque-2';
+                    else if (pos === 3) classePos = 'posicao-destaque-3';
+
+                    const textoPos = String(pos).padStart(2, '0') + 'º';
+
+                    // Processa as estrelas ganhas pelo jogador
+                    let estrelasHTML = '';
+                    const estrelasGanhas = u.estrelas || 0;
+                    
+                    // Se tiver conquista aranha, tiramos uma amarela do desenho básico para encaixar a branca no fim
+                    const totalEstrelasBase = u.conquista_aranha ? estrelasGanhas - 1 : estrelasGanhas;
+                    
+                    estrelasHTML += `<span class="estrelas-progresso">${"★".repeat(totalEstrelasBase)}</span>`;
+                    
+                    const vazias = 5 - estrelasGanhas;
+                    if (vazias > 0) {
+                        estrelasHTML += `<span class="estrelas-vazias">${"☆".repeat(vazias)}</span>`;
+                    }
+
+                    if (u.conquista_aranha) {
+                        estrelasHTML += `<span class="estrela-aranha-branca">★</span>`;
+                    }
+
+                    // Mapeia o cargo/crachá com base nas estrelas obtidas (1=Aprendiz, 2=Estagiário, etc.)
+                    let cargoText = '';
+                    let cargoClasse = '';
+
+                    if (estrelasGanhas === 1) { cargoText = 'Aprendiz'; cargoClasse = 'cargo-aprendiz'; }
+                    else if (estrelasGanhas === 2) { cargoText = 'Estagiário'; cargoClasse = 'cargo-estagiario'; }
+                    else if (estrelasGanhas === 3) { cargoText = 'Júnior'; cargoClasse = 'cargo-junior'; }
+                    else if (estrelasGanhas === 4) { cargoText = 'Pleno'; cargoClasse = 'cargo-pleno'; }
+                    else if (estrelasGanhas >= 5) { cargoText = 'Sênior'; cargoClasse = 'cargo-senior'; }
+
+                    if (u.conquista_aranha) {
+                        cargoText += ' Aranha';
+                        cargoClasse = 'cargo-aranha';
+                    }
+
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td class="${classePos}">${textoPos}</td>
+                        <td>${u.username}</td>
+                        <td>${estrelasHTML}</td>
+                        <td><span class="tag-cargo ${cargoClasse}">${cargoText}</span></td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+
+            } catch (e) {
+                console.error(e);
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="4" style="text-align: center; color: #ff5f56; font-weight: bold; padding: 40px; font-size: 1rem;">
+                            [ERRO] Falha ao sincronizar com o banco de dados.
+                        </td>
+                    </tr>`;
+            }
+        }
+
+        // Dispara a carga de dados dinâmicos do banco ao carregar a página
+        window.onload = carregarRanking;
+    </script>
+
+
+
+</body>
+
+
+</html>
+
+// ====================================================================================
+//            MAPA DE COMUNICAÇÃO E FLUXO DE DADOS — PROJETO SEMAE (PI2)
+//  Este bloco serve como guia de referência técnica para a futura migração de dados,
+//  integração com o site oficial e criação de novas validações (como e-mail/ID externo).
+// ====================================================================================
+
+// ------------------------------------------------------------------------------------
+// 1. FLUXO DE AUTENTICAÇÃO E IDENTIFICAÇÃO DO JOGADOR (SESSÃO)
+// ------------------------------------------------------------------------------------
+//
+// • [index.html] -> Porta de entrada local e online.
+//   - Ação: O jogador digita o nome no campo `#username` e clica em ENTRAR.
+//   - Local Storage: Grava a chave 'nomeEstagiario' (string) para uso de interface local.
+//   - Sessão no Servidor ( app.py ): O login real do site já está gravado no cookie
+//     criptografado 'jwt_token' (JWT). O jogo lê esse token invisivelmente para saber
+//     quem está jogando, garantindo que usuários com o mesmo nome em PCs diferentes
+//     não misturem ou subscrevam seus dados no banco de dados.
+//
+// ------------------------------------------------------------------------------------
+// 2. SISTEMA DE SALVAMENTO LOCAL E CONQUISTAS (PERSISTÊNCIA ESTÉTICA)
+// ------------------------------------------------------------------------------------
+//
+// • [mesa.html] & [dia_1.html] -> Verificação e ativação do troféu.
+//   - Chave Local: [NOME_DO_USUARIO]_conquistaAranha = 'true' (gravado no localStorage).
+//   - Comportamento: Se essa chave estiver ativa para o usuário logado, o código altera
+//     dinamicamente o caminho da imagem de fundo para 'mesa2.png' (mesa com a aranha).
+//   - Isolamento de Perfis: Usar o nome do usuário como prefixo impede que dois jogadores
+//     na mesma máquina e navegador tenham acesso à mesa modificada um do outro.
+//
+// ------------------------------------------------------------------------------------
+// 3. GATILHO DE ENTRADA — ACORDAR SERVIDOR (WAKE-UP PING)
+// ------------------------------------------------------------------------------------
+//
+// • [dia_1.html] -> Disparado na função iniciarTerminalDia1() (Fase 0).
+//   - Ação: Um fetch() em segundo plano envia uma requisição silenciosa de leitura.
+//   - Rota de Destino: GET para '/api/server-status'
+//   - Objetivo: Forçar o servidor gratuito do Render a iniciar o processo de "despertar"
+//     (que leva de 30 a 50 segundos) enquanto o jogador ainda está nas primeiras fases
+//     do terminal, eliminando qualquer sensação de travamento ou lentidão no final do dia.
+//
+// ------------------------------------------------------------------------------------
+// 4. GATILHO DE CONCLUSÃO — SALVAMENTO NA NUVEM (ENVIO DE DADOS)
+// ------------------------------------------------------------------------------------
+//
+// • [dia_1.html] -> Disparado no evento keypress da Fase 11 (Sucesso do Dia 1).
+//   - Ação: Dispara uma chamada assíncrona fetch() em segundo plano.
+//   - Rota de Destino: POST para '/api/save-score'
+//   - Variável de Verificação Local: 'errosTotaisNoDia' (soma de todas as falhas na digitação).
+//   - Payload de Envio (JSON):
+//     {
+//       "estrelas": 2,               // Integer. Indica o nível (Dia 1 concluído = 2 estrelas)
+//       "conquista_aranha": boolean  // True se errosTotaisNoDia === 0 (Perfect Run), senão False
+//     }
+//   - Processamento no app.py (PostgreSQL):
+//     O servidor decodifica o 'jwt_token' para obter o 'user_id' e o 'username'.
+//     Roda o comando SQL "ON CONFLICT (user_id) DO UPDATE" (UPSERT).
+//     - Se o usuário não tiver registro no ranking, cria uma linha limpa.
+//     - Se o usuário já tiver registro, atualiza as colunas mantendo apenas a melhor nota
+//       e define o carimbo de data 'updated_at' com a hora atual (CURRENT_TIMESTAMP).
+//
+// ------------------------------------------------------------------------------------
+// 5. ATUALIZAÇÃO DO QUADRO DE LÍDERES (REQUISIÇÃO E RENDERIZAÇÃO)
+// ------------------------------------------------------------------------------------
+//
+// • [ranking.html] -> Disparado na abertura da página (window.onload).
+//   - Ação: Dispara um fetch() de leitura.
+//   - Rota de Destino: GET para '/api/get-ranking' (exige cookie jwt_token ativo)
+//   - Dados Recebidos (JSON Array ordenado por Estrelas DESC, Aranha DESC e Data DESC):
+//     [
+//       {
+//         "id": 1,                      // ID do registro no banco
+//         "username": "LUCAS",          // Nome do estagiário
+//         "estrelas": 2,                // Quantidade de estrelas obtidas (1 a 5)
+//         "conquista_aranha": true      // Se possui o título Aranha desbloqueado (boolean)
+//       }
+//     ]
+//   - Renderização Dinâmica (Mapeamento de Cargos e Estrelas):
+//     - 1 Estrela = Aprendiz (Estrela: ★, Crachá: .cargo-aprendiz)
+//     - 2 Estrelas = Estagiário (Estrela: ★★, Crachá: .cargo-estagiario)
+//     - 3 Estrelas = Júnior (Estrela: ★★★, Crachá: .cargo-junior)
+//     - 4 Estrelas = Pleno (Estrela: ★★★★, Crachá: .cargo-pleno)
+//     - 5 Estrelas = Sênior (Estrela: ★★★★★, Crachá: .cargo-senior)
+//     - Se 'conquista_aranha' for TRUE:
+//       Substitui uma estrela amarela por uma estrela branca extra no final (★)
+//       Adiciona o sufixo " Aranha" ao nome do Cargo (Ex: "Estagiário Aranha")
+//       Aplica a classe CSS especial '.cargo-aranha' (borda e brilho vermelho neon).
+//
+// ====================================================================================
