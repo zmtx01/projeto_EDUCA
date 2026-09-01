@@ -1081,6 +1081,10 @@
         function encerrarDia() { 
             alert("Dia 1 concluído com sucesso! Progresso salvo no perfil de " + nomeEstagiario + ".");
         }
+        if (localStorage.getItem('abrirChamadoNoDia1') === 'true') {
+            localStorage.removeItem('abrirChamadoNoDia1'); // Limpa a etiqueta por segurança
+            clicarChamados(); // Executa a abertura automática do chamado na tela!
+        }
     </script>
 
 

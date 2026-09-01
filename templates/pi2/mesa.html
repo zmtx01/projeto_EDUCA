@@ -1121,6 +1121,9 @@
         function clicarChamados() {
             // Se o chamado estiver ativo (telefone tocando), vai para o Dia 1 de forma híbrida
             if (chamadoAtivo) {
+                // ATIVA A ETIQUETA PARA O DIA 1 SABER QUE DEVE ABRIR OS CHAMADOS NA ENTRADA
+                localStorage.setItem('abrirChamadoNoDia1', 'true');
+
                 if (window.location.protocol === 'file:') {
                     window.location.href = "dia_1.html"; 
                 } else {
