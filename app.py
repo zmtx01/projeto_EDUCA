@@ -131,6 +131,15 @@ def semae_index_page():
         return redirect(url_for('login_page'))
     return render_template('pi2/index.html')
 
+@app.route('/pi2/sala')
+def semae_sala_page():
+    # Exige que o usuário esteja logado no Projeto EDUCA para abrir a sala
+    token = request.cookies.get('jwt_token')
+    if not token or not validate_token(token):
+        return redirect(url_for('login_page'))
+    # Busca a página sala.html (tudo minúsculo) dentro de templates/pi2/
+    return render_template('pi2/sala.html')
+
 @app.route('/pi2/mesa')
 def semae_mesa_page():
     # Rota da Mesa: Abre o mesa.html de forma segura após o login do jogo
