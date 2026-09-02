@@ -593,23 +593,11 @@
         function fecharTudo() { fecharTela(); fecharManual(); fecharArquivos(); fecharChamados(); fecharRanking(); }
 
         function abrirRanking() {
-            // SISTEMA HÍBRIDO ATUALIZADO (SEM PISCADA E SEM ERROS 404):
+            // Sem iframes ou frescuras: apenas navega em tela cheia na mesma aba
             if (window.location.protocol === 'file:') {
-                // Se rodar localmente por dois cliques, navega para o ranking na mesma aba
                 window.location.href = 'ranking.html';
             } else {
-                fecharTudo();
-                
-                // DEFINE O LINK DO IFRAME DINAMICAMENTE PARA A ROTA DO SERVIDOR (SEM .HTML)
-                const iframe = document.querySelector('.ranking-iframe-janela');
-                if (iframe) {
-                    iframe.src = '/pi2/ranking';
-                }
-
-                const rankingBackdrop = document.getElementById('ranking-backdrop');
-                if (rankingBackdrop) {
-                    rankingBackdrop.style.display = 'flex';
-                }
+                window.location.href = '/pi2/ranking';
             }
         }
         function fecharRanking() {

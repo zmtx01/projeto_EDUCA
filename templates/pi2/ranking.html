@@ -396,16 +396,9 @@
     </div>
 
     <script>
-        function voltarEscritorio() {
-            if (window.self !== window.top) {
-                try {
-                    window.parent.fecharRanking();
-                } catch (e) {
-                    window.location.href = 'dia_1.html';
-                }
-            } else {
-                window.location.href = 'dia_1.html';
-            }
+       function voltarEscritorio() {
+            // Comando nativo que volta para a página anterior de forma suave
+            window.history.back();
         }
 
         // BUSCA AUTOMÁTICA E DESENHO DINÂMICO DOS LÍDERES DO BANCO DE DADOS
